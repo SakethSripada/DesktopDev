@@ -2,6 +2,7 @@
   "name": "desktopai",
   "version": "0.1.0",
   "private": true,
+  "main": "main.js",
   "dependencies": {
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
@@ -15,7 +16,9 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "electron": "electron .",
+    "dist": "electron-builder"
   },
   "eslintConfig": {
     "extends": [
@@ -34,5 +37,22 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "electron": "^30.0.9",
+    "electron-builder": "^22.11.7",
+    "electron-reload": "^2.0.0-alpha.1"
+  },
+  "build": {
+    "appId": "com.example.desktopai",
+    "productName": "DesktopAI",
+    "files": [
+      "build/**/*",
+      "main.js",
+      "preload.js"
+    ],
+    "directories": {
+      "buildResources": "assets"
+    }
   }
 }

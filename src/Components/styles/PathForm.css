@@ -1,0 +1,23 @@
+.path-form {
+    display: flex;
+    padding: 10px;
+    background-color: #2e2e2e;
+  }
+  
+  .path-input {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    margin-right: 10px;
+  }
+  
+  .path-submit {
+    padding: 10px;
+    background-color: #4e4e4e;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+  }
+  
