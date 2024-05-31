@@ -3,14 +3,14 @@ const path = require('path');
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1200,
+    height: 800,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
     },
   });
 
-  mainWindow.loadURL('http://localhost:3002');
+  mainWindow.loadURL('http://localhost:3001');
 
   Menu.setApplicationMenu(null);
 }

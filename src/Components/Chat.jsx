@@ -32,7 +32,8 @@ function Chat() {
         }
 
         const data = await response.json();
-        const botMessage = { text: data.response, sender: 'bot' };
+        console.log('API response:', data.response); 
+        const botMessage = { text: data.response.trim(), sender: 'bot' }; 
         setMessages((prevMessages) => [...prevMessages, botMessage]);
       } catch (error) {
         console.error('Error fetching response:', error);
