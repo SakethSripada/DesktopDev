@@ -11,18 +11,36 @@ function Chat() {
     setInput(e.target.value);
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (input.trim()) {
-      const newMessage = { text: input, sender: 'user' };
-      setMessages([...messages, newMessage]);
+      const userMessage = { text: input, sender: 'user' };
+      setMessages((prevMessages) => [...prevMessages, userMessage]);
       setInput('');
       setIsTyping(true);
 
-      setTimeout(() => {
-        const botMessage = { text: 'Lorem ipsum dolor sit amet...', sender: 'bot' };
-        setMessages([...messages, newMessage, botMessage]);
+      try {
+        const response = await fetch('http://localhost:5000/api/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ prompt: input }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        const botMessage = { text: data.response, sender: 'bot' };
+        setMessages((prevMessages) => [...prevMessages, botMessage]);
+      } catch (error) {
+        console.error('Error fetching response:', error);
+        const botMessage = { text: 'Error generating response. Please try again.', sender: 'bot' };
+        setMessages((prevMessages) => [...prevMessages, botMessage]);
+      } finally {
         setIsTyping(false);
-      }, 1000);
+      }
     }
   };
 
