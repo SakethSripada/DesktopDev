@@ -51,11 +51,23 @@ function Chat() {
     }
   };
 
+  const handleCopy = (text) => {
+    navigator.clipboard.writeText(text).then(() => {
+      alert('Copied to clipboard!');
+    }).catch((err) => {
+      console.error('Failed to copy: ', err);
+    });
+  };
+
   return (
     <div className="chat-container">
       <div className="messages-container">
         {messages.map((msg, index) => (
-          <Message key={index} message={msg} />
+          <Message 
+            key={index} 
+            message={msg} 
+            onCopy={() => handleCopy(msg.text)} 
+          />
         ))}
         {isTyping && (
           <div className="message bot">

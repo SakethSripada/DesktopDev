@@ -1,9 +1,10 @@
 import React from 'react';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import { FaCopy } from 'react-icons/fa';
 import './styles/Message.css';
 
-function Message({ message }) {
+function Message({ message, onCopy }) {
   console.log('Message content:', message.text); 
 
   const parts = message.text.split(/(```[\s\S]+?```)/g);
@@ -26,6 +27,11 @@ function Message({ message }) {
             return <p key={index}>{part}</p>;
           }
         })}
+        {message.sender === 'bot' && (
+          <button className="copy-button" onClick={onCopy}>
+            <FaCopy />
+          </button>
+        )}
       </div>
     </div>
   );

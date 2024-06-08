@@ -26,6 +26,7 @@
   color: #fff; 
   margin: 0; 
   line-height: 1.4; 
+  position: relative;
 }
 
 .message.user .text {
@@ -34,6 +35,20 @@
 
 .message .text p {
   margin: 0; 
+}
+
+.copy-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #007bff;
+}
+
+.copy-button:hover {
+  color: #0056b3;
 }
 
 .typing span {
