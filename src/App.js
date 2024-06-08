@@ -10,10 +10,14 @@ function App() {
     setSelectedTool(tool);
   };
 
+  const handleBackToMenu = () => {
+    setSelectedTool(null);
+  };
+
   return (
     <div className="app-container">
       {selectedTool === null && <MainMenu onSelectTool={handleSelectTool} />}
-      {selectedTool === 'chat' && <ChatPage />}
+      {selectedTool === 'chat' && <ChatPage onBackToMenu={handleBackToMenu} />}
     </div>
   );
 }
