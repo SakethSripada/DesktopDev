@@ -1,16 +1,23 @@
 import React from 'react';
+import { Box, Button, Typography } from '@mui/material';
 import '../styles/MainMenu.css';
 
 function MainMenu({ onSelectTool }) {
   return (
-    <div className="main-menu-container">
-      <h1>DevTools Companion</h1>
-      <div className="tool-buttons">
-        <button onClick={() => onSelectTool('chat')}>AI Chat</button>
-        <button onClick={() => onSelectTool('git')}>Git Tools</button>
-        <button onClick={() => onSelectTool('scaffold')}>Project Scaffolding</button>
-      </div>
-    </div>
+    <Box className="main-menu-container">
+      <Typography variant="h4" component="h1" gutterBottom>
+        DevTools Companion
+      </Typography>
+      <Button variant="contained" color="primary" onClick={() => onSelectTool('chat')}>
+        AI Chat
+      </Button>
+      <Button variant="contained" color="primary" onClick={() => onSelectTool('git')}>
+        Git Tools
+      </Button>
+      <Button variant="contained" color="primary">
+        Project Scaffolding
+      </Button>
+    </Box>
   );
 }
 

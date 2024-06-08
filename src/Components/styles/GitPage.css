@@ -1,0 +1,59 @@
+.git-page-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    background-color: #1e1e1e;
+    color: white;
+    height: 100vh;
+    box-sizing: border-box;
+  }
+  
+  .menu-button {
+    align-self: flex-start;
+    margin-bottom: 20px;
+  }
+  
+  .git-page-container .MuiTypography-h4 {
+    margin-bottom: 20px;
+    color: white;
+  }
+  
+  .git-page-container .MuiTypography-h5 {
+    margin-top: 40px;
+    margin-bottom: 20px;
+    color: white;
+  }
+  
+  .git-page-container .MuiButton-containedPrimary {
+    background-color: #4e4e4e;
+  }
+  
+  .git-page-container .MuiButton-containedPrimary:hover {
+    background-color: #3e3e3e;
+  }
+  
+  .outlined-textfield .MuiOutlinedInput-root {
+    & fieldset {
+      border-color: white;
+    }
+    &:hover fieldset {
+      border-color: white;
+    }
+  }
+  
+  .run-commit-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .run-commit-button {
+    margin-top: 20px;
+  }
+  
+  .MuiFormControlLabel-root {
+    margin: 0;
+  }
+  
