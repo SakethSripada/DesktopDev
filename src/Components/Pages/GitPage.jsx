@@ -1,8 +1,42 @@
-import React from 'react';
-import { Box, Button, TextField, Typography, Grid } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Button, TextField, Typography, Grid, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel } from '@mui/material';
+import axios from 'axios';
 import '../styles/GitPage.css';
 
 function GitPage({ onBackToMenu }) {
+  const [repoUrl, setRepoUrl] = useState('');
+  const [localPath, setLocalPath] = useState('');
+  const [commitHash, setCommitHash] = useState('');
+  const [connectionType, setConnectionType] = useState('clone');
+
+  const handleConnectRepo = async () => {
+    try {
+      if (connectionType === 'clone') {
+        const response = await axios.post('http://localhost:5000/connect-repo', { repoUrl, localPath });
+        alert(response.data.message);
+      } else if (connectionType === 'existing') {
+        const response = await axios.post('http://localhost:5000/connect-existing-repo', { localPath });
+        alert(response.data.message);
+      }
+    } catch (error) {
+      alert(`Error: ${error.response.data.error}`);
+    }
+  };
+
+  const handleRunCommit = async () => {
+    try {
+      const response = await axios.post('http://localhost:5000/run-commit', { commitHash });
+      alert(response.data.message);
+    } catch (error) {
+      alert(`Error: ${error.response.data.error}`);
+    }
+  };
+
+  const textFieldStyles = {
+    input: { color: 'white' },
+    label: { color: 'white' },
+  };
+
   return (
     <Box className="git-page-container">
       <Button variant="contained" color="secondary" onClick={onBackToMenu} className="menu-button">
@@ -41,6 +75,53 @@ function GitPage({ onBackToMenu }) {
         </Grid>
       </Grid>
 
+      <Box mt={6} className="connect-repo-section">
+        <Typography variant="h5" component="h2" gutterBottom>
+          Connect to Git Repository
+        </Typography>
+        <FormControl component="fieldset">
+          <FormLabel component="legend" style={{ color: 'white' }}>Connection Type</FormLabel>
+          <RadioGroup
+            row
+            aria-label="connectionType"
+            name="connectionType"
+            value={connectionType}
+            onChange={(e) => setConnectionType(e.target.value)}
+          >
+            <FormControlLabel value="clone" control={<Radio />} label="Clone New Repository" />
+            <FormControlLabel value="existing" control={<Radio />} label="Connect to Existing Repository" />
+          </RadioGroup>
+        </FormControl>
+        {connectionType === 'clone' && (
+          <TextField 
+            label="Repository URL" 
+            variant="outlined" 
+            fullWidth 
+            margin="normal"
+            value={repoUrl}
+            onChange={(e) => setRepoUrl(e.target.value)}
+            sx={textFieldStyles}
+          />
+        )}
+        <TextField 
+          label="Local Path" 
+          variant="outlined" 
+          fullWidth 
+          margin="normal"
+          value={localPath}
+          onChange={(e) => setLocalPath(e.target.value)}
+          sx={textFieldStyles}
+        />
+        <Button 
+          variant="contained" 
+          color="primary" 
+          onClick={handleConnectRepo}
+          style={{ marginTop: '20px' }}
+        >
+          {connectionType === 'clone' ? 'Clone Repository' : 'Connect to Repository'}
+        </Button>
+      </Box>
+
       <Box mt={6} className="run-commit-section">
         <Typography variant="h5" component="h2" gutterBottom>
           Run Commit by Hash
@@ -50,9 +131,16 @@ function GitPage({ onBackToMenu }) {
           variant="outlined" 
           fullWidth 
           margin="normal"
-          className="outlined-textfield"
+          value={commitHash}
+          onChange={(e) => setCommitHash(e.target.value)}
+          sx={textFieldStyles}
         />
-        <Button variant="contained" color="primary" className="run-commit-button" style={{ marginTop: '20px' }}>
+        <Button 
+          variant="contained" 
+          color="primary" 
+          onClick={handleRunCommit}
+          style={{ marginTop: '20px' }}
+        >
           Run Commit
         </Button>
       </Box>
