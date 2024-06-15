@@ -79,7 +79,7 @@ function GitPage({ onBackToMenu }) {
         <Typography variant="h5" component="h2" gutterBottom>
           Connect to Git Repository
         </Typography>
-        <FormControl component="fieldset">
+        <FormControl component="fieldset" className="connection-type-section">
           <FormLabel component="legend" style={{ color: 'white' }}>Connection Type</FormLabel>
           <RadioGroup
             row
@@ -92,34 +92,36 @@ function GitPage({ onBackToMenu }) {
             <FormControlLabel value="existing" control={<Radio />} label="Connect to Existing Repository" />
           </RadioGroup>
         </FormControl>
-        {connectionType === 'clone' && (
+        <Box className="input-fields-container">
+          {connectionType === 'clone' && (
+            <TextField 
+              label="Repository URL" 
+              variant="outlined" 
+              fullWidth 
+              margin="normal"
+              value={repoUrl}
+              onChange={(e) => setRepoUrl(e.target.value)}
+              sx={textFieldStyles}
+            />
+          )}
           <TextField 
-            label="Repository URL" 
+            label="Local Path" 
             variant="outlined" 
             fullWidth 
             margin="normal"
-            value={repoUrl}
-            onChange={(e) => setRepoUrl(e.target.value)}
+            value={localPath}
+            onChange={(e) => setLocalPath(e.target.value)}
             sx={textFieldStyles}
           />
-        )}
-        <TextField 
-          label="Local Path" 
-          variant="outlined" 
-          fullWidth 
-          margin="normal"
-          value={localPath}
-          onChange={(e) => setLocalPath(e.target.value)}
-          sx={textFieldStyles}
-        />
-        <Button 
-          variant="contained" 
-          color="primary" 
-          onClick={handleConnectRepo}
-          style={{ marginTop: '20px' }}
-        >
-          {connectionType === 'clone' ? 'Clone Repository' : 'Connect to Repository'}
-        </Button>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            onClick={handleConnectRepo}
+            style={{ marginTop: '20px' }}
+          >
+            {connectionType === 'clone' ? 'Clone Repository' : 'Connect to Repository'}
+          </Button>
+        </Box>
       </Box>
 
       <Box mt={6} className="run-commit-section">

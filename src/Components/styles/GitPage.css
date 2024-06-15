@@ -57,3 +57,17 @@
     margin: 0;
   }
   
+  .connection-type-section {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .input-fields-container {
+    width: 100%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
