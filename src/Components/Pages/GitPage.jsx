@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Button, TextField, Typography, Grid, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel, Dialog, DialogActions, DialogContent, DialogTitle, Checkbox, FormGroup } from '@mui/material';
 import axios from 'axios';
 import '../styles/GitPage.css';
@@ -19,6 +19,9 @@ function GitPage({ onBackToMenu }) {
   const [autoStage, setAutoStage] = useState(false);
   const [stageFilesError, setStageFilesError] = useState(false);
   const [unstagedFiles, setUnstagedFiles] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const filesPerPage = 10;
 
   const handleConnectRepo = async () => {
     try {
@@ -48,10 +51,10 @@ function GitPage({ onBackToMenu }) {
     }
   };
 
-  const fetchFiles = async () => {
+  const fetchChangedFiles = async () => {
     try {
-      const response = await axios.post('http://localhost:5000/list-files', { localPath });
-      setFiles(response.data.files);
+      const response = await axios.post('http://localhost:5000/get-status', { localPath });
+      setFiles(response.data.changedFiles);
     } catch (error) {
       alert(`Error: ${error.response.data.error}`);
     }
@@ -61,7 +64,7 @@ function GitPage({ onBackToMenu }) {
     setModalType(type);
     setModalOpen(true);
     if (type === 'commit') {
-      fetchFiles();
+      fetchChangedFiles();
     }
   };
 
@@ -77,6 +80,15 @@ function GitPage({ onBackToMenu }) {
         ? prevSelectedFiles.filter((f) => f !== file)
         : [...prevSelectedFiles, file]
     );
+  };
+
+  const handleSelectAllFiles = (event) => {
+    if (event.target.checked) {
+      const allFiles = files.map(file => file.path);
+      setSelectedFiles(allFiles);
+    } else {
+      setSelectedFiles([]);
+    }
   };
 
   const handleCommit = async () => {
@@ -130,6 +142,19 @@ function GitPage({ onBackToMenu }) {
     input: { color: 'white' },
     label: { color: 'white' },
   };
+
+  const indexOfLastFile = currentPage * filesPerPage;
+  const indexOfFirstFile = indexOfLastFile - filesPerPage;
+
+  const filteredFiles = files.filter(file => 
+    file.path.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const currentFiles = filteredFiles.slice(indexOfFirstFile, indexOfLastFile);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+  const totalPages = Math.ceil(filteredFiles.length / filesPerPage);
 
   return (
     <Box className="git-page-container">
@@ -263,26 +288,63 @@ function GitPage({ onBackToMenu }) {
                 InputLabelProps={{ style: { color: 'white' } }}
                 InputProps={{ style: { color: 'white' } }}
               />
+              <TextField
+                label="Search Files"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputLabelProps={{ style: { color: 'white' } }}
+                InputProps={{ style: { color: 'white' } }}
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={selectedFiles.length === files.length}
+                    onChange={handleSelectAllFiles}
+                    name="selectAllFiles"
+                    style={{ color: 'white' }}
+                  />
+                }
+                label="Select All Changes"
+                style={{ color: 'white' }}
+              />
               <Typography variant="h6" component="h3" gutterBottom style={{ color: 'white' }}>
                 Select Files to Commit
               </Typography>
-              <FormGroup>
-                {files.map((file, index) => (
-                  <FormControlLabel
-                    key={index}
-                    control={
-                      <Checkbox
-                        checked={selectedFiles.includes(file)}
-                        onChange={() => handleFileSelection(file)}
-                        name={file}
-                        style={{ color: 'white' }}
-                      />
-                    }
-                    label={file}
-                    style={{ color: 'white' }}
-                  />
-                ))}
-              </FormGroup>
+              {files.length === 0 ? (
+                <Typography variant="body1" style={{ color: 'white' }}>
+                  No changes to commit.
+                </Typography>
+              ) : (
+                <FormGroup>
+                  {currentFiles.map((file, index) => (
+                    <FormControlLabel
+                      key={index}
+                      control={
+                        <Checkbox
+                          checked={selectedFiles.includes(file.path)}
+                          onChange={() => handleFileSelection(file.path)}
+                          name={file.path}
+                          style={{ color: 'white' }}
+                        />
+                      }
+                      label={file.path}
+                      style={{ color: 'white' }}
+                    />
+                  ))}
+                </FormGroup>
+              )}
+              {totalPages > 1 && (
+                <div className="pagination">
+                  {Array.from({ length: totalPages }, (_, index) => (
+                    <Button key={index + 1} onClick={() => paginate(index + 1)} style={{ color: 'white' }}>
+                      {index + 1}
+                    </Button>
+                  ))}
+                </div>
+              )}
               <TextField
                 label="Local Path"
                 variant="outlined"

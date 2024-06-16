@@ -207,5 +207,24 @@ router.post('/list-files', async (req, res) => {
   }
 });
 
+router.post('/get-status', async (req, res) => {
+  const { localPath } = req.body;
+  const normalizedPath = path.normalize(localPath);
+  const git = simpleGit(normalizedPath);
+
+  console.log(`Getting status of repository: ${normalizedPath}`);
+
+  try {
+    await git.cwd(normalizedPath);
+    const status = await git.status();
+    const modifiedFiles = status.files.filter(file => file.index !== ' ' || file.working_dir !== ' ');
+    res.status(200).send({ changedFiles: modifiedFiles });
+  } catch (error) {
+    console.error('Error getting repository status:', error.message);
+    res.status(500).send({ error: 'Failed to get repository status.', details: error.message });
+  }
+});
+
+
 
 module.exports = router;
