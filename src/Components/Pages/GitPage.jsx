@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Button, TextField, Typography, Grid, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel } from '@mui/material';
+import { Box, Button, TextField, Typography, Grid, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel, Dialog, DialogActions, DialogContent, DialogTitle, Checkbox, FormGroup } from '@mui/material';
 import axios from 'axios';
 import '../styles/GitPage.css';
 
@@ -8,18 +8,33 @@ function GitPage({ onBackToMenu }) {
   const [localPath, setLocalPath] = useState('');
   const [commitHash, setCommitHash] = useState('');
   const [connectionType, setConnectionType] = useState('clone');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalType, setModalType] = useState('');
+  const [commitMessage, setCommitMessage] = useState('');
+  const [filesToCommit, setFilesToCommit] = useState('');
+  const [branchName, setBranchName] = useState('');
+  const [githubUsername, setGithubUsername] = useState('');
+  const [githubToken, setGithubToken] = useState('');
+  const [autoStage, setAutoStage] = useState(false);
+  const [stageFilesError, setStageFilesError] = useState(false);
+  const [unstagedFiles, setUnstagedFiles] = useState([]);
 
   const handleConnectRepo = async () => {
     try {
+      let response;
       if (connectionType === 'clone') {
-        const response = await axios.post('http://localhost:5000/connect-repo', { repoUrl, localPath });
-        alert(response.data.message);
+        response = await axios.post('http://localhost:5000/connect-repo', { repoUrl, localPath });
       } else if (connectionType === 'existing') {
-        const response = await axios.post('http://localhost:5000/connect-existing-repo', { localPath });
-        alert(response.data.message);
+        response = await axios.post('http://localhost:5000/connect-existing-repo', { localPath });
       }
+      alert(response.data.message);
     } catch (error) {
-      alert(`Error: ${error.response.data.error}`);
+      console.error('Error connecting to repository:', error);
+      if (error.response && error.response.data) {
+        alert(`Error: ${error.response.data.error}`);
+      } else {
+        alert('An unknown error occurred.');
+      }
     }
   };
 
@@ -27,6 +42,63 @@ function GitPage({ onBackToMenu }) {
     try {
       const response = await axios.post('http://localhost:5000/run-commit', { commitHash });
       alert(response.data.message);
+    } catch (error) {
+      alert(`Error: ${error.response.data.error}`);
+    }
+  };
+
+  const handleModalOpen = (type) => {
+    setModalType(type);
+    setModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setModalOpen(false);
+    setStageFilesError(false);
+    setUnstagedFiles([]);
+  };
+
+  const handleCommit = async () => {
+    try {
+      const response = await axios.post('http://localhost:5000/commit', { commitMessage, filesToCommit, localPath, autoStage });
+      alert(response.data.message);
+      handleModalClose();
+    } catch (error) {
+      if (error.response.data.error === 'One or more files are not staged.') {
+        setStageFilesError(true);
+        setUnstagedFiles(error.response.data.unstagedFiles);
+      } else {
+        alert(`Error: ${error.response.data.error}`);
+      }
+    }
+  };
+
+  const handleStageFiles = async () => {
+    try {
+      const response = await axios.post('http://localhost:5000/stage-files', { filesToCommit, localPath });
+      alert(response.data.message);
+      setStageFilesError(false);
+      setUnstagedFiles([]);
+    } catch (error) {
+      alert(`Error: ${error.response.data.error}`);
+    }
+  };
+
+  const handlePush = async () => {
+    try {
+      const response = await axios.post('http://localhost:5000/push', { branchName, localPath, remoteUrl: repoUrl, githubUsername, githubToken });
+      alert(response.data.message);
+      handleModalClose();
+    } catch (error) {
+      alert(`Error: ${error.response.data.error}`);
+    }
+  };
+
+  const handlePull = async () => {
+    try {
+      const response = await axios.post('http://localhost:5000/pull', { branchName, localPath, remoteUrl: repoUrl, githubUsername, githubToken });
+      alert(response.data.message);
+      handleModalClose();
     } catch (error) {
       alert(`Error: ${error.response.data.error}`);
     }
@@ -47,13 +119,13 @@ function GitPage({ onBackToMenu }) {
       </Typography>
       <Grid container spacing={2} justifyContent="center">
         <Grid item xs={12} sm={4} md={3}>
-          <Button variant="contained" color="primary" fullWidth>Push</Button>
+          <Button variant="contained" color="primary" fullWidth onClick={() => handleModalOpen('push')}>Push</Button>
         </Grid>
         <Grid item xs={12} sm={4} md={3}>
-          <Button variant="contained" color="primary" fullWidth>Pull</Button>
+          <Button variant="contained" color="primary" fullWidth onClick={() => handleModalOpen('pull')}>Pull</Button>
         </Grid>
         <Grid item xs={12} sm={4} md={3}>
-          <Button variant="contained" color="primary" fullWidth>Commit</Button>
+          <Button variant="contained" color="primary" fullWidth onClick={() => handleModalOpen('commit')}>Commit</Button>
         </Grid>
         <Grid item xs={12} sm={4} md={3}>
           <Button variant="contained" color="primary" fullWidth>Stash</Button>
@@ -146,6 +218,198 @@ function GitPage({ onBackToMenu }) {
           Run Commit
         </Button>
       </Box>
+
+      <Dialog open={modalOpen} onClose={handleModalClose}>
+        <DialogTitle style={{ color: 'white', backgroundColor: '#333' }}>
+          {modalType === 'commit' && 'Commit Changes'}
+          {modalType === 'push' && 'Push Changes'}
+          {modalType === 'pull' && 'Pull Changes'}
+        </DialogTitle>
+        <DialogContent style={{ backgroundColor: '#333' }}>
+          {modalType === 'commit' && (
+            <>
+              <TextField
+                label="Commit Message"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={commitMessage}
+                onChange={(e) => setCommitMessage(e.target.value)}
+                sx={textFieldStyles}
+              />
+              <TextField
+                label="Files to Commit (comma-separated)"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={filesToCommit}
+                onChange={(e) => setFilesToCommit(e.target.value)}
+                sx={textFieldStyles}
+              />
+              <TextField
+                label="Local Path"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={localPath}
+                onChange={(e) => setLocalPath(e.target.value)}
+                sx={textFieldStyles}
+              />
+              <FormGroup>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={autoStage}
+                      onChange={(e) => setAutoStage(e.target.checked)}
+                      name="autoStage"
+                      color="primary"
+                    />
+                  }
+                  label="Auto Stage Files"
+                />
+              </FormGroup>
+              {stageFilesError && (
+                <>
+                  <Typography variant="body1" color="error" gutterBottom>
+                    One or more files are not staged. Would you like to stage the files?
+                  </Typography>
+                  <ul>
+                    {unstagedFiles.map((file, index) => (
+                      <li key={index}>{file}</li>
+                    ))}
+                  </ul>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleStageFiles}
+                    style={{ marginTop: '10px' }}
+                  >
+                    Stage Files
+                  </Button>
+                </>
+              )}
+            </>
+          )}
+          {modalType === 'push' && (
+            <>
+              <TextField
+                label="GitHub Username"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={githubUsername}
+                onChange={(e) => setGithubUsername(e.target.value)}
+                sx={textFieldStyles}
+              />
+              <TextField
+                label="GitHub Token"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={githubToken}
+                onChange={(e) => setGithubToken(e.target.value)}
+                sx={textFieldStyles}
+              />
+              <TextField
+                label="Branch Name"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={branchName}
+                onChange={(e) => setBranchName(e.target.value)}
+                sx={textFieldStyles}
+              />
+              <TextField
+                label="Local Path"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={localPath}
+                onChange={(e) => setLocalPath(e.target.value)}
+                sx={textFieldStyles}
+              />
+              <TextField
+                label="Repository URL"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={repoUrl}
+                onChange={(e) => setRepoUrl(e.target.value)}
+                sx={textFieldStyles}
+              />
+            </>
+          )}
+          {modalType === 'pull' && (
+            <>
+              <TextField
+                label="GitHub Username"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={githubUsername}
+                onChange={(e) => setGithubUsername(e.target.value)}
+                sx={textFieldStyles}
+              />
+              <TextField
+                label="GitHub Token"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={githubToken}
+                onChange={(e) => setGithubToken(e.target.value)}
+                sx={textFieldStyles}
+              />
+              <TextField
+                label="Branch Name"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={branchName}
+                onChange={(e) => setBranchName(e.target.value)}
+                sx={textFieldStyles}
+              />
+              <TextField
+                label="Local Path"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={localPath}
+                onChange={(e) => setLocalPath(e.target.value)}
+                sx={textFieldStyles}
+              />
+              <TextField
+                label="Repository URL"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={repoUrl}
+                onChange={(e) => setRepoUrl(e.target.value)}
+                sx={textFieldStyles}
+              />
+            </>
+          )}
+        </DialogContent>
+        <DialogActions style={{ backgroundColor: '#333' }}>
+          <Button onClick={handleModalClose} color="secondary">
+            Cancel
+          </Button>
+          {modalType === 'commit' && !stageFilesError && (
+            <Button onClick={handleCommit} color="primary">
+              Commit
+            </Button>
+          )}
+          {modalType === 'push' && (
+            <Button onClick={handlePush} color="primary">
+              Push
+            </Button>
+          )}
+          {modalType === 'pull' && (
+            <Button onClick={handlePull} color="primary">
+              Pull
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
