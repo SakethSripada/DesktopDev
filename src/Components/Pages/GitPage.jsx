@@ -173,7 +173,8 @@ function GitPage({ onBackToMenu }) {
               margin="normal"
               value={repoUrl}
               onChange={(e) => setRepoUrl(e.target.value)}
-              sx={textFieldStyles}
+              InputLabelProps={{ style: { color: 'white' } }}
+              InputProps={{ style: { color: 'white' } }}
             />
           )}
           <TextField 
@@ -183,7 +184,8 @@ function GitPage({ onBackToMenu }) {
             margin="normal"
             value={localPath}
             onChange={(e) => setLocalPath(e.target.value)}
-            sx={textFieldStyles}
+            InputLabelProps={{ style: { color: 'white' } }}
+            InputProps={{ style: { color: 'white' } }}
           />
           <Button 
             variant="contained" 
@@ -207,7 +209,8 @@ function GitPage({ onBackToMenu }) {
           margin="normal"
           value={commitHash}
           onChange={(e) => setCommitHash(e.target.value)}
-          sx={textFieldStyles}
+          InputLabelProps={{ style: { color: 'white' } }}
+          InputProps={{ style: { color: 'white' } }}
         />
         <Button 
           variant="contained" 
@@ -235,7 +238,8 @@ function GitPage({ onBackToMenu }) {
                 margin="normal"
                 value={commitMessage}
                 onChange={(e) => setCommitMessage(e.target.value)}
-                sx={textFieldStyles}
+                InputLabelProps={{ style: { color: 'white' } }}
+                InputProps={{ style: { color: 'white' } }}
               />
               <TextField
                 label="Files to Commit (comma-separated)"
@@ -244,7 +248,8 @@ function GitPage({ onBackToMenu }) {
                 margin="normal"
                 value={filesToCommit}
                 onChange={(e) => setFilesToCommit(e.target.value)}
-                sx={textFieldStyles}
+                InputLabelProps={{ style: { color: 'white' } }}
+                InputProps={{ style: { color: 'white' } }}
               />
               <TextField
                 label="Local Path"
@@ -253,7 +258,8 @@ function GitPage({ onBackToMenu }) {
                 margin="normal"
                 value={localPath}
                 onChange={(e) => setLocalPath(e.target.value)}
-                sx={textFieldStyles}
+                InputLabelProps={{ style: { color: 'white' } }}
+                InputProps={{ style: { color: 'white' } }}
               />
               <FormGroup>
                 <FormControlLabel
@@ -299,7 +305,8 @@ function GitPage({ onBackToMenu }) {
                 margin="normal"
                 value={githubUsername}
                 onChange={(e) => setGithubUsername(e.target.value)}
-                sx={textFieldStyles}
+                InputLabelProps={{ style: { color: 'white' } }}
+                InputProps={{ style: { color: 'white' } }}
               />
               <TextField
                 label="GitHub Token"
@@ -308,7 +315,8 @@ function GitPage({ onBackToMenu }) {
                 margin="normal"
                 value={githubToken}
                 onChange={(e) => setGithubToken(e.target.value)}
-                sx={textFieldStyles}
+                InputLabelProps={{ style: { color: 'white' } }}
+                InputProps={{ style: { color: 'white' } }}
               />
               <TextField
                 label="Branch Name"
@@ -317,7 +325,8 @@ function GitPage({ onBackToMenu }) {
                 margin="normal"
                 value={branchName}
                 onChange={(e) => setBranchName(e.target.value)}
-                sx={textFieldStyles}
+                InputLabelProps={{ style: { color: 'white' } }}
+                InputProps={{ style: { color: 'white' } }}
               />
               <TextField
                 label="Local Path"
@@ -326,7 +335,8 @@ function GitPage({ onBackToMenu }) {
                 margin="normal"
                 value={localPath}
                 onChange={(e) => setLocalPath(e.target.value)}
-                sx={textFieldStyles}
+                InputLabelProps={{ style: { color: 'white' } }}
+                InputProps={{ style: { color: 'white' } }}
               />
               <TextField
                 label="Repository URL"
@@ -335,7 +345,8 @@ function GitPage({ onBackToMenu }) {
                 margin="normal"
                 value={repoUrl}
                 onChange={(e) => setRepoUrl(e.target.value)}
-                sx={textFieldStyles}
+                InputLabelProps={{ style: { color: 'white' } }}
+                InputProps={{ style: { color: 'white' } }}
               />
             </>
           )}
@@ -348,7 +359,8 @@ function GitPage({ onBackToMenu }) {
                 margin="normal"
                 value={githubUsername}
                 onChange={(e) => setGithubUsername(e.target.value)}
-                sx={textFieldStyles}
+                InputLabelProps={{ style: { color: 'white' } }}
+                InputProps={{ style: { color: 'white' } }}
               />
               <TextField
                 label="GitHub Token"
@@ -357,7 +369,8 @@ function GitPage({ onBackToMenu }) {
                 margin="normal"
                 value={githubToken}
                 onChange={(e) => setGithubToken(e.target.value)}
-                sx={textFieldStyles}
+                InputLabelProps={{ style: { color: 'white' } }}
+                InputProps={{ style: { color: 'white' } }}
               />
               <TextField
                 label="Branch Name"
@@ -366,7 +379,8 @@ function GitPage({ onBackToMenu }) {
                 margin="normal"
                 value={branchName}
                 onChange={(e) => setBranchName(e.target.value)}
-                sx={textFieldStyles}
+                InputLabelProps={{ style: { color: 'white' } }}
+                InputProps={{ style: { color: 'white' } }}
               />
               <TextField
                 label="Local Path"
@@ -375,7 +389,8 @@ function GitPage({ onBackToMenu }) {
                 margin="normal"
                 value={localPath}
                 onChange={(e) => setLocalPath(e.target.value)}
-                sx={textFieldStyles}
+                InputLabelProps={{ style: { color: 'white' } }}
+                InputProps={{ style: { color: 'white' } }}
               />
               <TextField
                 label="Repository URL"
@@ -384,7 +399,8 @@ function GitPage({ onBackToMenu }) {
                 margin="normal"
                 value={repoUrl}
                 onChange={(e) => setRepoUrl(e.target.value)}
-                sx={textFieldStyles}
+                InputLabelProps={{ style: { color: 'white' } }}
+                InputProps={{ style: { color: 'white' } }}
               />
             </>
           )}
