@@ -192,4 +192,20 @@ router.post('/stage-files', async (req, res) => {
   }
 });
 
+router.post('/list-files', async (req, res) => {
+  const { localPath } = req.body;
+  const normalizedPath = path.normalize(localPath);
+
+  console.log(`Listing files in: ${normalizedPath}`);
+
+  try {
+    const files = await fs.promises.readdir(normalizedPath);
+    res.status(200).send({ files });
+  } catch (error) {
+    console.error('Error listing files:', error.message);
+    res.status(500).send({ error: 'Failed to list files.', details: error.message });
+  }
+});
+
+
 module.exports = router;

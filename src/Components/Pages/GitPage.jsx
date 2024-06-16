@@ -11,7 +11,8 @@ function GitPage({ onBackToMenu }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalType, setModalType] = useState('');
   const [commitMessage, setCommitMessage] = useState('');
-  const [filesToCommit, setFilesToCommit] = useState('');
+  const [files, setFiles] = useState([]);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const [branchName, setBranchName] = useState('');
   const [githubUsername, setGithubUsername] = useState('');
   const [githubToken, setGithubToken] = useState('');
@@ -47,9 +48,21 @@ function GitPage({ onBackToMenu }) {
     }
   };
 
+  const fetchFiles = async () => {
+    try {
+      const response = await axios.post('http://localhost:5000/list-files', { localPath });
+      setFiles(response.data.files);
+    } catch (error) {
+      alert(`Error: ${error.response.data.error}`);
+    }
+  };
+
   const handleModalOpen = (type) => {
     setModalType(type);
     setModalOpen(true);
+    if (type === 'commit') {
+      fetchFiles();
+    }
   };
 
   const handleModalClose = () => {
@@ -58,8 +71,17 @@ function GitPage({ onBackToMenu }) {
     setUnstagedFiles([]);
   };
 
+  const handleFileSelection = (file) => {
+    setSelectedFiles((prevSelectedFiles) =>
+      prevSelectedFiles.includes(file)
+        ? prevSelectedFiles.filter((f) => f !== file)
+        : [...prevSelectedFiles, file]
+    );
+  };
+
   const handleCommit = async () => {
     try {
+      const filesToCommit = selectedFiles.join(',');
       const response = await axios.post('http://localhost:5000/commit', { commitMessage, filesToCommit, localPath, autoStage });
       alert(response.data.message);
       handleModalClose();
@@ -75,7 +97,7 @@ function GitPage({ onBackToMenu }) {
 
   const handleStageFiles = async () => {
     try {
-      const response = await axios.post('http://localhost:5000/stage-files', { filesToCommit, localPath });
+      const response = await axios.post('http://localhost:5000/stage-files', { filesToCommit: selectedFiles.join(','), localPath });
       alert(response.data.message);
       setStageFilesError(false);
       setUnstagedFiles([]);
@@ -114,7 +136,7 @@ function GitPage({ onBackToMenu }) {
       <Button variant="contained" color="secondary" onClick={onBackToMenu} className="menu-button">
         Menu
       </Button>
-      <Typography variant="h4" component="h1" gutterBottom>
+      <Typography variant="h4" component="h1" gutterBottom style={{ color: 'white' }}>
         Git Operations
       </Typography>
       <Grid container spacing={2} justifyContent="center">
@@ -148,7 +170,7 @@ function GitPage({ onBackToMenu }) {
       </Grid>
 
       <Box mt={6} className="connect-repo-section">
-        <Typography variant="h5" component="h2" gutterBottom>
+        <Typography variant="h5" component="h2" gutterBottom style={{ color: 'white' }}>
           Connect to Git Repository
         </Typography>
         <FormControl component="fieldset" className="connection-type-section">
@@ -160,8 +182,8 @@ function GitPage({ onBackToMenu }) {
             value={connectionType}
             onChange={(e) => setConnectionType(e.target.value)}
           >
-            <FormControlLabel value="clone" control={<Radio />} label="Clone New Repository" />
-            <FormControlLabel value="existing" control={<Radio />} label="Connect to Existing Repository" />
+            <FormControlLabel value="clone" control={<Radio style={{ color: 'white' }} />} label="Clone New Repository" style={{ color: 'white' }} />
+            <FormControlLabel value="existing" control={<Radio style={{ color: 'white' }} />} label="Connect to Existing Repository" style={{ color: 'white' }} />
           </RadioGroup>
         </FormControl>
         <Box className="input-fields-container">
@@ -199,7 +221,7 @@ function GitPage({ onBackToMenu }) {
       </Box>
 
       <Box mt={6} className="run-commit-section">
-        <Typography variant="h5" component="h2" gutterBottom>
+        <Typography variant="h5" component="h2" gutterBottom style={{ color: 'white' }}>
           Run Commit by Hash
         </Typography>
         <TextField 
@@ -222,7 +244,7 @@ function GitPage({ onBackToMenu }) {
         </Button>
       </Box>
 
-      <Dialog open={modalOpen} onClose={handleModalClose}>
+      <Dialog open={modalOpen} onClose={handleModalClose} maxWidth="md" fullWidth>
         <DialogTitle style={{ color: 'white', backgroundColor: '#333' }}>
           {modalType === 'commit' && 'Commit Changes'}
           {modalType === 'push' && 'Push Changes'}
@@ -241,16 +263,26 @@ function GitPage({ onBackToMenu }) {
                 InputLabelProps={{ style: { color: 'white' } }}
                 InputProps={{ style: { color: 'white' } }}
               />
-              <TextField
-                label="Files to Commit (comma-separated)"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                value={filesToCommit}
-                onChange={(e) => setFilesToCommit(e.target.value)}
-                InputLabelProps={{ style: { color: 'white' } }}
-                InputProps={{ style: { color: 'white' } }}
-              />
+              <Typography variant="h6" component="h3" gutterBottom style={{ color: 'white' }}>
+                Select Files to Commit
+              </Typography>
+              <FormGroup>
+                {files.map((file, index) => (
+                  <FormControlLabel
+                    key={index}
+                    control={
+                      <Checkbox
+                        checked={selectedFiles.includes(file)}
+                        onChange={() => handleFileSelection(file)}
+                        name={file}
+                        style={{ color: 'white' }}
+                      />
+                    }
+                    label={file}
+                    style={{ color: 'white' }}
+                  />
+                ))}
+              </FormGroup>
               <TextField
                 label="Local Path"
                 variant="outlined"
@@ -268,10 +300,11 @@ function GitPage({ onBackToMenu }) {
                       checked={autoStage}
                       onChange={(e) => setAutoStage(e.target.checked)}
                       name="autoStage"
-                      color="primary"
+                      style={{ color: 'white' }}
                     />
                   }
                   label="Auto Stage Files"
+                  style={{ color: 'white' }}
                 />
               </FormGroup>
               {stageFilesError && (
@@ -281,7 +314,7 @@ function GitPage({ onBackToMenu }) {
                   </Typography>
                   <ul>
                     {unstagedFiles.map((file, index) => (
-                      <li key={index}>{file}</li>
+                      <li key={index} style={{ color: 'white' }}>{file}</li>
                     ))}
                   </ul>
                   <Button
