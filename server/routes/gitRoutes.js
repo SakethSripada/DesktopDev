@@ -225,6 +225,24 @@ router.post('/get-status', async (req, res) => {
   }
 });
 
+router.post('/stash', async (req, res) => {
+  const { localPath, stashMessage } = req.body;
+  const normalizedPath = path.normalize(localPath);
+  const git = simpleGit(normalizedPath);
+
+  console.log(`Stashing changes in ${normalizedPath} with message: ${stashMessage}`);
+
+  try {
+    await git.cwd(normalizedPath);
+    const stashResult = await git.stash(['push', '-m', stashMessage]);
+    console.log('Stash successful.', stashResult);
+    res.status(200).send({ message: 'Stash successful.', details: stashResult });
+  } catch (error) {
+    console.error('Error stashing changes:', error.message);
+    res.status(500).send({ error: 'Failed to stash changes.', details: error.message });
+  }
+});
+
 
 
 module.exports = router;

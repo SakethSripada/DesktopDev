@@ -23,6 +23,7 @@ function GitPage({ onBackToMenu }) {
   const [rightClickedTab, setRightClickedTab] = useState(null);
   const [renameValue, setRenameValue] = useState('');
   const [isRenaming, setIsRenaming] = useState(false);
+  const [stashMessage, setStashMessage] = useState('');
 
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
@@ -197,6 +198,18 @@ function GitPage({ onBackToMenu }) {
     setIsRenaming(false); 
   };
 
+  const handleStash = async () => {
+    try {
+      const { localPath } = repoTabs[currentTab];
+      const response = await axios.post('http://localhost:5000/stash', { stashMessage, localPath });
+      alert(response.data.message);
+      handleModalClose();
+    }
+    catch (error) {
+      alert(`Error: ${error.response.data.error}`);
+    }
+  };
+
   const indexOfLastFile = currentPage * filesPerPage;
   const indexOfFirstFile = indexOfLastFile - filesPerPage;
 
@@ -229,7 +242,7 @@ function GitPage({ onBackToMenu }) {
           <Button variant="contained" color="primary" fullWidth onClick={() => handleModalOpen('commit')}>Commit</Button>
         </Grid>
         <Grid item xs={12} sm={4} md={3}>
-          <Button variant="contained" color="primary" fullWidth>Stash</Button>
+        <Button variant="contained" color="primary" fullWidth onClick={() => handleModalOpen('stash')}>Stash</Button>
         </Grid>
         <Grid item xs={12} sm={4} md={3}>
           <Button variant="contained" color="primary" fullWidth>Checkout</Button>
@@ -394,8 +407,23 @@ function GitPage({ onBackToMenu }) {
           {modalType === 'commit' && `Commit Changes - ${repoTabs[currentTab].name}`}
           {modalType === 'push' && `Push Changes - ${repoTabs[currentTab].name}`}
           {modalType === 'pull' && `Pull Changes - ${repoTabs[currentTab].name}`}
+          {modalType === 'stash' && `Stash Changes - ${repoTabs[currentTab].name}`}
         </DialogTitle>
         <DialogContent style={{ backgroundColor: '#333' }}>
+          {modalType === 'stash' && (
+            <>
+              <TextField
+                label="Stash Message"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={stashMessage}
+                onChange={(e) => setStashMessage(e.target.value)}
+                InputLabelProps={{ style: { color: 'white' } }}
+                InputProps={{ style: { color: 'white' } }}
+              />
+            </>
+          )}
           {modalType === 'commit' && (
             <>
               <TextField
@@ -626,6 +654,11 @@ function GitPage({ onBackToMenu }) {
           {modalType === 'pull' && (
             <Button onClick={handlePull} color="primary">
               Pull
+            </Button>
+          )}
+          {modalType === 'stash' && (
+            <Button onClick={handleStash} color="primary">
+              Stash
             </Button>
           )}
         </DialogActions>
