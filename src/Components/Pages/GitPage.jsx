@@ -24,6 +24,8 @@ function GitPage({ onBackToMenu }) {
   const [renameValue, setRenameValue] = useState('');
   const [isRenaming, setIsRenaming] = useState(false);
   const [stashMessage, setStashMessage] = useState('');
+  const [checkoutBranch, setCheckoutBranch] = useState('');
+  // const [branches, setBranches] = useState([]);
 
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
@@ -210,6 +212,17 @@ function GitPage({ onBackToMenu }) {
     }
   };
 
+  const handleCheckoutBranch = async () => {
+    try {
+      const { localPath } = repoTabs[currentTab];
+      const response = await axios.post('http://localhost:5000/checkout', { branchName: checkoutBranch, localPath });
+      alert(response.data.message);
+      handleModalClose();
+    } catch (error) {
+      alert(`Error: ${error.response.data.error}`);
+    }
+  };
+  
   const indexOfLastFile = currentPage * filesPerPage;
   const indexOfFirstFile = indexOfLastFile - filesPerPage;
 
@@ -245,7 +258,7 @@ function GitPage({ onBackToMenu }) {
         <Button variant="contained" color="primary" fullWidth onClick={() => handleModalOpen('stash')}>Stash</Button>
         </Grid>
         <Grid item xs={12} sm={4} md={3}>
-          <Button variant="contained" color="primary" fullWidth>Checkout</Button>
+        <Button variant="contained" color="primary" fullWidth onClick={() => handleModalOpen('checkout')}>Checkout</Button>
         </Grid>
         <Grid item xs={12} sm={4} md={3}>
           <Button variant="contained" color="primary" fullWidth>Delete Previous Commit</Button>
@@ -408,8 +421,23 @@ function GitPage({ onBackToMenu }) {
           {modalType === 'push' && `Push Changes - ${repoTabs[currentTab].name}`}
           {modalType === 'pull' && `Pull Changes - ${repoTabs[currentTab].name}`}
           {modalType === 'stash' && `Stash Changes - ${repoTabs[currentTab].name}`}
+          {modalType === 'checkout' && `Checkout Branch - ${repoTabs[currentTab].name}`}
         </DialogTitle>
         <DialogContent style={{ backgroundColor: '#333' }}>
+          {modalType === 'checkout' && (
+            <>
+              <TextField
+                label="Branch Name"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={checkoutBranch}
+                onChange={(e) => setCheckoutBranch(e.target.value)}
+                InputLabelProps={{ style: { color: 'white' } }}
+                InputProps={{ style: { color: 'white' } }}
+              />
+            </>
+          )}
           {modalType === 'stash' && (
             <>
               <TextField
@@ -659,6 +687,11 @@ function GitPage({ onBackToMenu }) {
           {modalType === 'stash' && (
             <Button onClick={handleStash} color="primary">
               Stash
+            </Button>
+          )}
+          {modalType === 'checkout' && (
+            <Button onClick={handleCheckoutBranch} color="primary">
+              Checkout
             </Button>
           )}
         </DialogActions>

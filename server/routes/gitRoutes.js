@@ -244,5 +244,24 @@ router.post('/stash', async (req, res) => {
 });
 
 
+router.post('/checkout', async (req, res) => {
+  const { branchName, localPath } = req.body;
+  const normalizedPath = path.normalize(localPath);
+  const git = simpleGit(normalizedPath);
+
+  console.log(`Checking out branch: ${branchName} in ${normalizedPath}`);
+
+  try {
+    await git.cwd(normalizedPath);
+    const checkoutResult = await git.checkout(branchName);
+    console.log('Checkout successful.', checkoutResult);
+    res.status(200).send({ message: 'Checkout successful.', details: checkoutResult });
+  } catch (error) {
+    console.error('Error checking out branch:', error.message);
+    res.status(500).send({ error: 'Failed to checkout branch.', details: error.message });
+  }
+});
+  
+
 
 module.exports = router;
