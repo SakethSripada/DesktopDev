@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Box, Button, TextField, Typography, Grid, Tabs, Tab, AppBar, Dialog, DialogActions, DialogContent, DialogTitle, Checkbox, FormControlLabel, FormGroup } from '@mui/material';
+import { Box, Button, TextField, Typography, Grid, Tabs, Tab, AppBar, Dialog, DialogActions, DialogContent, DialogTitle, Checkbox, FormControlLabel, FormGroup, Menu, MenuItem } from '@mui/material';
 import axios from 'axios';
 import '../styles/GitPage.css';
 
 function GitPage({ onBackToMenu }) {
-  const [repoTabs, setRepoTabs] = useState([{ repoUrl: '', localPath: '', githubUsername: '', githubToken: '', branchName: '' }]);
+  const [repoTabs, setRepoTabs] = useState([{ repoUrl: '', localPath: '', githubUsername: '', githubToken: '', branchName: '', name: 'Repo 1' }]);
   const [currentTab, setCurrentTab] = useState(0);
   const [currentConfig, setCurrentConfig] = useState('remote');
   const [commitHash, setCommitHash] = useState('');
@@ -19,6 +19,9 @@ function GitPage({ onBackToMenu }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const filesPerPage = 10;
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [rightClickedTab, setRightClickedTab] = useState(null);
+  const [renameValue, setRenameValue] = useState('');
 
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
@@ -36,7 +39,9 @@ function GitPage({ onBackToMenu }) {
   };
 
   const handleAddRepoTab = () => {
-    setRepoTabs([...repoTabs, { repoUrl: '', localPath: '', githubUsername: '', githubToken: '', branchName: '' }]);
+    const newRepoTabs = [...repoTabs, { repoUrl: '', localPath: '', githubUsername: '', githubToken: '', branchName: '', name: `Repo ${repoTabs.length + 1}` }];
+    setRepoTabs(newRepoTabs);
+    setCurrentTab(newRepoTabs.length - 1);
   };
 
   const handleCloneRepo = async () => {
@@ -156,6 +161,32 @@ function GitPage({ onBackToMenu }) {
     }
   };
 
+  const handleRightClick = (event, index) => {
+    event.preventDefault();
+    setAnchorEl(event.currentTarget);
+    setRightClickedTab(index);
+  };
+
+  const handleCloseMenu = () => {
+    setAnchorEl(null);
+    setRightClickedTab(null);
+  };
+
+  const handleRenameTab = () => {
+    const newRepoTabs = [...repoTabs];
+    newRepoTabs[rightClickedTab].name = renameValue;
+    setRepoTabs(newRepoTabs);
+    setRenameValue('');
+    handleCloseMenu();
+  };
+
+  const handleDeleteTab = () => {
+    const newRepoTabs = repoTabs.filter((_, index) => index !== rightClickedTab);
+    setRepoTabs(newRepoTabs);
+    setCurrentTab(Math.max(0, currentTab - 1));
+    handleCloseMenu();
+  };
+
   const textFieldStyles = {
     input: { color: 'white' },
     label: { color: 'white' },
@@ -219,7 +250,11 @@ function GitPage({ onBackToMenu }) {
         <AppBar position="static" style={{ backgroundColor: '#333' }}>
           <Tabs value={currentTab} onChange={handleTabChange} aria-label="repo tabs">
             {repoTabs.map((tab, index) => (
-              <Tab key={index} label={`Repo ${index + 1}`} />
+              <Tab 
+                key={index} 
+                label={tab.name}
+                onContextMenu={(event) => handleRightClick(event, index)} 
+              />
             ))}
             <Button onClick={handleAddRepoTab} style={{ color: 'white' }}>+</Button>
           </Tabs>
@@ -351,9 +386,9 @@ function GitPage({ onBackToMenu }) {
 
       <Dialog open={modalOpen} onClose={handleModalClose} maxWidth="md" fullWidth>
         <DialogTitle style={{ color: 'white', backgroundColor: '#333' }}>
-          {modalType === 'commit' && 'Commit Changes'}
-          {modalType === 'push' && 'Push Changes'}
-          {modalType === 'pull' && 'Pull Changes'}
+          {modalType === 'commit' && `Commit Changes - ${repoTabs[currentTab].name}`}
+          {modalType === 'push' && `Push Changes - ${repoTabs[currentTab].name}`}
+          {modalType === 'pull' && `Pull Changes - ${repoTabs[currentTab].name}`}
         </DialogTitle>
         <DialogContent style={{ backgroundColor: '#333' }}>
           {modalType === 'commit' && (
@@ -588,6 +623,38 @@ function GitPage({ onBackToMenu }) {
               Pull
             </Button>
           )}
+        </DialogActions>
+      </Dialog>
+
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleCloseMenu}
+      >
+        <MenuItem onClick={() => setRenameValue(repoTabs[rightClickedTab].name)}>Rename</MenuItem>
+        <MenuItem onClick={handleDeleteTab}>Delete</MenuItem>
+      </Menu>
+
+      <Dialog open={Boolean(renameValue)} onClose={() => setRenameValue('')}>
+        <DialogTitle>Rename Repository</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="New Name"
+            type="text"
+            fullWidth
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRenameValue('')} color="secondary">
+            Cancel
+          </Button>
+          <Button onClick={handleRenameTab} color="primary">
+            Save
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
