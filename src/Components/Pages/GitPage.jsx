@@ -27,6 +27,7 @@ function GitPage({ onBackToMenu }) {
   const [checkoutBranch, setCheckoutBranch] = useState('');
   const [branches, setBranches] = useState([]);
   const [currentBranch, setCurrentBranch] = useState('');
+  const [selectedCommitBranch, setSelectedCommitBranch] = useState('');
 
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
@@ -119,6 +120,8 @@ function GitPage({ onBackToMenu }) {
     try {
       const { localPath } = repoTabs[currentTab];
       const filesToCommit = selectedFiles.join(',');
+      const branchToCommit = selectedCommitBranch || currentBranch;
+      await axios.post('http://localhost:5000/checkout', { branchName: branchToCommit, localPath }); 
       const response = await axios.post('http://localhost:5000/commit', { commitMessage, filesToCommit, localPath, autoStage });
       alert(response.data.message);
       handleModalClose();
@@ -479,7 +482,7 @@ function GitPage({ onBackToMenu }) {
           {modalType === 'commit' && (
             <>
               <Typography variant="body1" style={{ color: 'white', marginBottom: '10px' }}>
-                Committing to branch: {currentBranch}
+                Committing to branch: {selectedCommitBranch || currentBranch}
               </Typography>
               <TextField
                 select
@@ -487,8 +490,8 @@ function GitPage({ onBackToMenu }) {
                 variant="outlined"
                 fullWidth
                 margin="normal"
-                value={checkoutBranch}
-                onChange={(e) => setCheckoutBranch(e.target.value)}
+                value={selectedCommitBranch || currentBranch}
+                onChange={(e) => setSelectedCommitBranch(e.target.value)}
                 InputLabelProps={{ style: { color: 'white' } }}
                 InputProps={{ style: { color: 'white' } }}
               >
