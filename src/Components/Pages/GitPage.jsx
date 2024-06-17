@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Button, TextField, Typography, Grid, Tabs, Tab, AppBar, Dialog, DialogActions, DialogContent, DialogTitle, Checkbox, FormControlLabel, FormGroup, Menu, MenuItem } from '@mui/material';
 import axios from 'axios';
 import '../styles/GitPage.css';
@@ -25,7 +25,8 @@ function GitPage({ onBackToMenu }) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [stashMessage, setStashMessage] = useState('');
   const [checkoutBranch, setCheckoutBranch] = useState('');
-  // const [branches, setBranches] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [currentBranch, setCurrentBranch] = useState('');
 
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
@@ -218,10 +219,26 @@ function GitPage({ onBackToMenu }) {
       const response = await axios.post('http://localhost:5000/checkout', { branchName: checkoutBranch, localPath });
       alert(response.data.message);
       handleModalClose();
+      fetchBranches(); 
     } catch (error) {
       alert(`Error: ${error.response.data.error}`);
     }
   };
+
+  const fetchBranches = useCallback(async () => {
+    try {
+      const { localPath } = repoTabs[currentTab];
+      const response = await axios.post('http://localhost:5000/list-branches', { localPath });
+      setBranches(response.data.branches);
+      setCurrentBranch(response.data.currentBranch);
+    } catch (error) {
+      alert(`Error: ${error.response.data.error}`);
+    }
+  }, [currentTab, repoTabs]);
+  
+  useEffect(() => {
+    fetchBranches();
+  }, [currentTab, fetchBranches]);
   
   const indexOfLastFile = currentPage * filesPerPage;
   const indexOfFirstFile = indexOfLastFile - filesPerPage;
@@ -427,7 +444,8 @@ function GitPage({ onBackToMenu }) {
           {modalType === 'checkout' && (
             <>
               <TextField
-                label="Branch Name"
+                select
+                label="Branch"
                 variant="outlined"
                 fullWidth
                 margin="normal"
@@ -435,7 +453,13 @@ function GitPage({ onBackToMenu }) {
                 onChange={(e) => setCheckoutBranch(e.target.value)}
                 InputLabelProps={{ style: { color: 'white' } }}
                 InputProps={{ style: { color: 'white' } }}
-              />
+              >
+                {branches.map((branch, index) => (
+                  <MenuItem key={index} value={branch}>
+                    {branch}
+                  </MenuItem>
+                ))}
+              </TextField>
             </>
           )}
           {modalType === 'stash' && (
@@ -454,6 +478,26 @@ function GitPage({ onBackToMenu }) {
           )}
           {modalType === 'commit' && (
             <>
+              <Typography variant="body1" style={{ color: 'white', marginBottom: '10px' }}>
+                Committing to branch: {currentBranch}
+              </Typography>
+              <TextField
+                select
+                label="Branch"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={checkoutBranch}
+                onChange={(e) => setCheckoutBranch(e.target.value)}
+                InputLabelProps={{ style: { color: 'white' } }}
+                InputProps={{ style: { color: 'white' } }}
+              >
+                {branches.map((branch, index) => (
+                  <MenuItem key={index} value={branch}>
+                    {branch}
+                  </MenuItem>
+                ))}
+              </TextField>
               <TextField
                 label="Commit Message"
                 variant="outlined"

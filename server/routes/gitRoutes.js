@@ -261,7 +261,25 @@ router.post('/checkout', async (req, res) => {
     res.status(500).send({ error: 'Failed to checkout branch.', details: error.message });
   }
 });
-  
+
+
+router.post('/list-branches', async (req, res) => {
+  const { localPath } = req.body;
+  const normalizedPath = path.normalize(localPath);
+  const git = simpleGit(normalizedPath);
+
+  console.log(`Listing branches in ${normalizedPath}`);
+
+  try {
+    await git.cwd(normalizedPath);
+    const branches = await git.branch();
+    console.log('Branches fetched successfully.', branches);
+    res.status(200).send({ message: 'Branches fetched successfully.', branches: branches.all, currentBranch: branches.current });
+  } catch (error) {
+    console.error('Error listing branches:', error.message);
+    res.status(500).send({ error: 'Failed to list branches.', details: error.message });
+  }
+});
 
 
 module.exports = router;
