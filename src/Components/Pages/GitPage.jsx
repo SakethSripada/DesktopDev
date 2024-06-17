@@ -22,6 +22,7 @@ function GitPage({ onBackToMenu }) {
   const [anchorEl, setAnchorEl] = useState(null);
   const [rightClickedTab, setRightClickedTab] = useState(null);
   const [renameValue, setRenameValue] = useState('');
+  const [isRenaming, setIsRenaming] = useState(false);
 
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
@@ -187,9 +188,13 @@ function GitPage({ onBackToMenu }) {
     handleCloseMenu();
   };
 
-  const textFieldStyles = {
-    input: { color: 'white' },
-    label: { color: 'white' },
+  const handleOpenRenameDialog = () => {
+    setIsRenaming(true); 
+    setRenameValue(repoTabs[rightClickedTab].name);
+  };
+
+  const handleCloseRenameDialog = () => {
+    setIsRenaming(false); 
   };
 
   const indexOfLastFile = currentPage * filesPerPage;
@@ -631,11 +636,11 @@ function GitPage({ onBackToMenu }) {
         open={Boolean(anchorEl)}
         onClose={handleCloseMenu}
       >
-        <MenuItem onClick={() => setRenameValue(repoTabs[rightClickedTab].name)}>Rename</MenuItem>
+        <MenuItem onClick={handleOpenRenameDialog}>Rename</MenuItem>
         <MenuItem onClick={handleDeleteTab}>Delete</MenuItem>
       </Menu>
 
-      <Dialog open={Boolean(renameValue)} onClose={() => setRenameValue('')}>
+      <Dialog open={isRenaming} onClose={handleCloseRenameDialog}>
         <DialogTitle>Rename Repository</DialogTitle>
         <DialogContent>
           <TextField
@@ -646,15 +651,21 @@ function GitPage({ onBackToMenu }) {
             fullWidth
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                handleRenameTab(); 
+                handleCloseRenameDialog()
+              }
+            }}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setRenameValue('')} color="secondary">
+        <Button onClick={handleCloseRenameDialog} color="secondary">
             Cancel
-          </Button>
-          <Button onClick={handleRenameTab} color="primary">
+        </Button>
+        <Button onClick={handleRenameTab} color="primary">
             Save
-          </Button>
+        </Button>
         </DialogActions>
       </Dialog>
     </Box>
