@@ -1,73 +1,98 @@
 .git-page-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 20px;
-    background-color: #1e1e1e;
-    color: white;
-    height: 100vh;
-    box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  background-color: #1e1e1e;
+  color: white;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+.menu-button {
+  align-self: flex-start;
+  margin-bottom: 20px;
+}
+
+.git-page-container .MuiTypography-h4 {
+  margin-bottom: 20px;
+  color: white;
+}
+
+.git-page-container .MuiTypography-h5 {
+  margin-top: 40px;
+  margin-bottom: 20px;
+  color: white;
+}
+
+.git-page-container .MuiButton-containedPrimary {
+  background-color: #4e4e4e;
+}
+
+.git-page-container .MuiButton-containedPrimary:hover {
+  background-color: #3e3e3e;
+}
+
+.outlined-textfield .MuiOutlinedInput-root {
+  & fieldset {
+    border-color: white;
   }
-  
-  .menu-button {
-    align-self: flex-start;
-    margin-bottom: 20px;
+  &:hover fieldset {
+    border-color: white;
   }
-  
-  .git-page-container .MuiTypography-h4 {
-    margin-bottom: 20px;
-    color: white;
-  }
-  
-  .git-page-container .MuiTypography-h5 {
-    margin-top: 40px;
-    margin-bottom: 20px;
-    color: white;
-  }
-  
-  .git-page-container .MuiButton-containedPrimary {
-    background-color: #4e4e4e;
-  }
-  
-  .git-page-container .MuiButton-containedPrimary:hover {
-    background-color: #3e3e3e;
-  }
-  
-  .outlined-textfield .MuiOutlinedInput-root {
-    & fieldset {
-      border-color: white;
-    }
-    &:hover fieldset {
-      border-color: white;
-    }
-  }
-  
-  .run-commit-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-  }
-  
-  .run-commit-button {
-    margin-top: 20px;
-  }
-  
-  .MuiFormControlLabel-root {
-    margin: 0;
-  }
-  
-  .connection-type-section {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-  }
-  
-  .input-fields-container {
-    width: 100%;
-    max-width: 500px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  
+}
+
+.run-commit-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.run-commit-button {
+  margin-top: 20px;
+}
+
+.MuiFormControlLabel-root {
+  margin: 0;
+}
+
+.connection-type-section {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.input-fields-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.config-section {
+  width: 500px; 
+  margin: 0 auto; 
+  background-color: #333;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.config-button {
+  color: white;
+  border-bottom: none;
+  flex-grow: 1;
+  background-color: #444;
+  padding: 10px 20px;
+  text-align: center;
+}
+
+.config-button.active {
+  border-bottom: 2px solid white;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}

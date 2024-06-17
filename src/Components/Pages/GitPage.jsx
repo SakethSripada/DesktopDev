@@ -1,21 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Button, TextField, Typography, Grid, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel, Dialog, DialogActions, DialogContent, DialogTitle, Checkbox, FormGroup } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Button, TextField, Typography, Grid, Tabs, Tab, AppBar, Dialog, DialogActions, DialogContent, DialogTitle, Checkbox, FormControlLabel, FormGroup } from '@mui/material';
 import axios from 'axios';
 import '../styles/GitPage.css';
 
 function GitPage({ onBackToMenu }) {
-  const [repoUrl, setRepoUrl] = useState('');
-  const [localPath, setLocalPath] = useState('');
+  const [repoTabs, setRepoTabs] = useState([{ repoUrl: '', localPath: '', githubUsername: '', githubToken: '', branchName: '' }]);
+  const [currentTab, setCurrentTab] = useState(0);
+  const [currentConfig, setCurrentConfig] = useState('remote');
   const [commitHash, setCommitHash] = useState('');
-  const [connectionType, setConnectionType] = useState('clone');
   const [modalOpen, setModalOpen] = useState(false);
   const [modalType, setModalType] = useState('');
   const [commitMessage, setCommitMessage] = useState('');
   const [files, setFiles] = useState([]);
   const [selectedFiles, setSelectedFiles] = useState([]);
-  const [branchName, setBranchName] = useState('');
-  const [githubUsername, setGithubUsername] = useState('');
-  const [githubToken, setGithubToken] = useState('');
   const [autoStage, setAutoStage] = useState(false);
   const [stageFilesError, setStageFilesError] = useState(false);
   const [unstagedFiles, setUnstagedFiles] = useState([]);
@@ -23,14 +20,29 @@ function GitPage({ onBackToMenu }) {
   const [currentPage, setCurrentPage] = useState(1);
   const filesPerPage = 10;
 
-  const handleConnectRepo = async () => {
+  const handleTabChange = (event, newValue) => {
+    setCurrentTab(newValue);
+    setCurrentConfig('remote');
+  };
+
+  const handleConfigChange = (configType) => {
+    setCurrentConfig(configType);
+  };
+
+  const handleRepoInputChange = (index, field, value) => {
+    const newRepoTabs = [...repoTabs];
+    newRepoTabs[index][field] = value;
+    setRepoTabs(newRepoTabs);
+  };
+
+  const handleAddRepoTab = () => {
+    setRepoTabs([...repoTabs, { repoUrl: '', localPath: '', githubUsername: '', githubToken: '', branchName: '' }]);
+  };
+
+  const handleCloneRepo = async () => {
     try {
-      let response;
-      if (connectionType === 'clone') {
-        response = await axios.post('http://localhost:5000/connect-repo', { repoUrl, localPath });
-      } else if (connectionType === 'existing') {
-        response = await axios.post('http://localhost:5000/connect-existing-repo', { localPath });
-      }
+      const { repoUrl, localPath } = repoTabs[currentTab];
+      const response = await axios.post('http://localhost:5000/connect-repo', { repoUrl, localPath });
       alert(response.data.message);
     } catch (error) {
       console.error('Error connecting to repository:', error);
@@ -44,7 +56,8 @@ function GitPage({ onBackToMenu }) {
 
   const handleRunCommit = async () => {
     try {
-      const response = await axios.post('http://localhost:5000/run-commit', { commitHash });
+      const { localPath } = repoTabs[currentTab];
+      const response = await axios.post('http://localhost:5000/run-commit', { commitHash, localPath });
       alert(response.data.message);
     } catch (error) {
       alert(`Error: ${error.response.data.error}`);
@@ -53,6 +66,7 @@ function GitPage({ onBackToMenu }) {
 
   const fetchChangedFiles = async () => {
     try {
+      const { localPath } = repoTabs[currentTab];
       const response = await axios.post('http://localhost:5000/get-status', { localPath });
       setFiles(response.data.changedFiles);
     } catch (error) {
@@ -93,6 +107,7 @@ function GitPage({ onBackToMenu }) {
 
   const handleCommit = async () => {
     try {
+      const { localPath } = repoTabs[currentTab];
       const filesToCommit = selectedFiles.join(',');
       const response = await axios.post('http://localhost:5000/commit', { commitMessage, filesToCommit, localPath, autoStage });
       alert(response.data.message);
@@ -109,6 +124,7 @@ function GitPage({ onBackToMenu }) {
 
   const handleStageFiles = async () => {
     try {
+      const { localPath } = repoTabs[currentTab];
       const response = await axios.post('http://localhost:5000/stage-files', { filesToCommit: selectedFiles.join(','), localPath });
       alert(response.data.message);
       setStageFilesError(false);
@@ -120,6 +136,7 @@ function GitPage({ onBackToMenu }) {
 
   const handlePush = async () => {
     try {
+      const { branchName, localPath, repoUrl, githubUsername, githubToken } = repoTabs[currentTab];
       const response = await axios.post('http://localhost:5000/push', { branchName, localPath, remoteUrl: repoUrl, githubUsername, githubToken });
       alert(response.data.message);
       handleModalClose();
@@ -130,6 +147,7 @@ function GitPage({ onBackToMenu }) {
 
   const handlePull = async () => {
     try {
+      const { branchName, localPath, repoUrl, githubUsername, githubToken } = repoTabs[currentTab];
       const response = await axios.post('http://localhost:5000/pull', { branchName, localPath, remoteUrl: repoUrl, githubUsername, githubToken });
       alert(response.data.message);
       handleModalClose();
@@ -157,11 +175,11 @@ function GitPage({ onBackToMenu }) {
   const totalPages = Math.ceil(filteredFiles.length / filesPerPage);
 
   return (
-    <Box className="git-page-container">
+    <Box className="git-page-container" sx={{ color: 'white' }}>
       <Button variant="contained" color="secondary" onClick={onBackToMenu} className="menu-button">
         Menu
       </Button>
-      <Typography variant="h4" component="h1" gutterBottom style={{ color: 'white' }}>
+      <Typography variant="h4" component="h1" gutterBottom>
         Git Operations
       </Typography>
       <Grid container spacing={2} justifyContent="center">
@@ -195,58 +213,120 @@ function GitPage({ onBackToMenu }) {
       </Grid>
 
       <Box mt={6} className="connect-repo-section">
-        <Typography variant="h5" component="h2" gutterBottom style={{ color: 'white' }}>
-          Connect to Git Repository
+        <Typography variant="h5" component="h2" gutterBottom>
+          Manage Git Repositories
         </Typography>
-        <FormControl component="fieldset" className="connection-type-section">
-          <FormLabel component="legend" style={{ color: 'white' }}>Connection Type</FormLabel>
-          <RadioGroup
-            row
-            aria-label="connectionType"
-            name="connectionType"
-            value={connectionType}
-            onChange={(e) => setConnectionType(e.target.value)}
-          >
-            <FormControlLabel value="clone" control={<Radio style={{ color: 'white' }} />} label="Clone New Repository" style={{ color: 'white' }} />
-            <FormControlLabel value="existing" control={<Radio style={{ color: 'white' }} />} label="Connect to Existing Repository" style={{ color: 'white' }} />
-          </RadioGroup>
-        </FormControl>
-        <Box className="input-fields-container">
-          {connectionType === 'clone' && (
-            <TextField 
-              label="Repository URL" 
-              variant="outlined" 
-              fullWidth 
-              margin="normal"
-              value={repoUrl}
-              onChange={(e) => setRepoUrl(e.target.value)}
-              InputLabelProps={{ style: { color: 'white' } }}
-              InputProps={{ style: { color: 'white' } }}
-            />
-          )}
-          <TextField 
-            label="Local Path" 
-            variant="outlined" 
-            fullWidth 
-            margin="normal"
-            value={localPath}
-            onChange={(e) => setLocalPath(e.target.value)}
-            InputLabelProps={{ style: { color: 'white' } }}
-            InputProps={{ style: { color: 'white' } }}
-          />
-          <Button 
-            variant="contained" 
-            color="primary" 
-            onClick={handleConnectRepo}
-            style={{ marginTop: '20px' }}
-          >
-            {connectionType === 'clone' ? 'Clone Repository' : 'Connect to Repository'}
-          </Button>
+        <AppBar position="static" style={{ backgroundColor: '#333' }}>
+          <Tabs value={currentTab} onChange={handleTabChange} aria-label="repo tabs">
+            {repoTabs.map((tab, index) => (
+              <Tab key={index} label={`Repo ${index + 1}`} />
+            ))}
+            <Button onClick={handleAddRepoTab} style={{ color: 'white' }}>+</Button>
+          </Tabs>
+        </AppBar>
+        <Box className="config-section">
+          <Box className="connection-type-section">
+            <Button
+              onClick={() => handleConfigChange('remote')}
+              className={`config-button ${currentConfig === 'remote' ? 'active' : ''}`}
+            >
+              Remote Config
+            </Button>
+            <Button
+              onClick={() => handleConfigChange('local')}
+              className={`config-button ${currentConfig === 'local' ? 'active' : ''}`}
+            >
+              Local Config
+            </Button>
+          </Box>
+          <Box className="input-fields-container">
+            {repoTabs.map((tab, index) => (
+              <Box hidden={currentTab !== index} key={index} sx={{ width: '100%' }}>
+                {currentConfig === 'remote' ? (
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={6}>
+                      <TextField 
+                        label="Repository URL" 
+                        variant="outlined" 
+                        fullWidth 
+                        margin="normal"
+                        value={tab.repoUrl}
+                        onChange={(e) => handleRepoInputChange(index, 'repoUrl', e.target.value)}
+                        InputLabelProps={{ style: { color: 'white' } }}
+                        InputProps={{ style: { color: 'white' } }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <TextField 
+                        label="GitHub Username" 
+                        variant="outlined" 
+                        fullWidth 
+                        margin="normal"
+                        value={tab.githubUsername}
+                        onChange={(e) => handleRepoInputChange(index, 'githubUsername', e.target.value)}
+                        InputLabelProps={{ style: { color: 'white' } }}
+                        InputProps={{ style: { color: 'white' } }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <TextField 
+                        label="GitHub Token" 
+                        variant="outlined" 
+                        fullWidth 
+                        margin="normal"
+                        value={tab.githubToken}
+                        onChange={(e) => handleRepoInputChange(index, 'githubToken', e.target.value)}
+                        InputLabelProps={{ style: { color: 'white' } }}
+                        InputProps={{ style: { color: 'white' } }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <TextField 
+                        label="Branch Name" 
+                        variant="outlined" 
+                        fullWidth 
+                        margin="normal"
+                        value={tab.branchName}
+                        onChange={(e) => handleRepoInputChange(index, 'branchName', e.target.value)}
+                        InputLabelProps={{ style: { color: 'white' } }}
+                        InputProps={{ style: { color: 'white' } }}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Button 
+                        variant="contained" 
+                        color="primary" 
+                        onClick={handleCloneRepo}
+                        style={{ marginTop: '20px' }}
+                      >
+                        Clone Repository
+                      </Button>
+                    </Grid>
+                  </Grid>
+                ) : (
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <TextField 
+                        label="Local Path" 
+                        variant="outlined" 
+                        fullWidth 
+                        margin="normal"
+                        value={tab.localPath}
+                        onChange={(e) => handleRepoInputChange(index, 'localPath', e.target.value)}
+                        InputLabelProps={{ style: { color: 'white' } }}
+                        InputProps={{ style: { color: 'white' } }}
+                      />
+                    </Grid>
+                  </Grid>
+                )}
+              </Box>
+            ))}
+          </Box>
         </Box>
       </Box>
 
       <Box mt={6} className="run-commit-section">
-        <Typography variant="h5" component="h2" gutterBottom style={{ color: 'white' }}>
+        <Typography variant="h5" component="h2" gutterBottom>
           Run Commit by Hash
         </Typography>
         <TextField 
@@ -331,8 +411,7 @@ function GitPage({ onBackToMenu }) {
                         />
                       }
                       label={file.path}
-                      style={{ color: 'white' }}
-                    />
+                      style={{ color: 'white' }}/>
                   ))}
                 </FormGroup>
               )}
@@ -345,16 +424,6 @@ function GitPage({ onBackToMenu }) {
                   ))}
                 </div>
               )}
-              <TextField
-                label="Local Path"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                value={localPath}
-                onChange={(e) => setLocalPath(e.target.value)}
-                InputLabelProps={{ style: { color: 'white' } }}
-                InputProps={{ style: { color: 'white' } }}
-              />
               <FormGroup>
                 <FormControlLabel
                   control={
@@ -398,8 +467,8 @@ function GitPage({ onBackToMenu }) {
                 variant="outlined"
                 fullWidth
                 margin="normal"
-                value={githubUsername}
-                onChange={(e) => setGithubUsername(e.target.value)}
+                value={repoTabs[currentTab].githubUsername}
+                onChange={(e) => handleRepoInputChange(currentTab, 'githubUsername', e.target.value)}
                 InputLabelProps={{ style: { color: 'white' } }}
                 InputProps={{ style: { color: 'white' } }}
               />
@@ -408,8 +477,8 @@ function GitPage({ onBackToMenu }) {
                 variant="outlined"
                 fullWidth
                 margin="normal"
-                value={githubToken}
-                onChange={(e) => setGithubToken(e.target.value)}
+                value={repoTabs[currentTab].githubToken}
+                onChange={(e) => handleRepoInputChange(currentTab, 'githubToken', e.target.value)}
                 InputLabelProps={{ style: { color: 'white' } }}
                 InputProps={{ style: { color: 'white' } }}
               />
@@ -418,8 +487,8 @@ function GitPage({ onBackToMenu }) {
                 variant="outlined"
                 fullWidth
                 margin="normal"
-                value={branchName}
-                onChange={(e) => setBranchName(e.target.value)}
+                value={repoTabs[currentTab].branchName}
+                onChange={(e) => handleRepoInputChange(currentTab, 'branchName', e.target.value)}
                 InputLabelProps={{ style: { color: 'white' } }}
                 InputProps={{ style: { color: 'white' } }}
               />
@@ -428,8 +497,8 @@ function GitPage({ onBackToMenu }) {
                 variant="outlined"
                 fullWidth
                 margin="normal"
-                value={localPath}
-                onChange={(e) => setLocalPath(e.target.value)}
+                value={repoTabs[currentTab].localPath}
+                onChange={(e) => handleRepoInputChange(currentTab, 'localPath', e.target.value)}
                 InputLabelProps={{ style: { color: 'white' } }}
                 InputProps={{ style: { color: 'white' } }}
               />
@@ -438,8 +507,8 @@ function GitPage({ onBackToMenu }) {
                 variant="outlined"
                 fullWidth
                 margin="normal"
-                value={repoUrl}
-                onChange={(e) => setRepoUrl(e.target.value)}
+                value={repoTabs[currentTab].repoUrl}
+                onChange={(e) => handleRepoInputChange(currentTab, 'repoUrl', e.target.value)}
                 InputLabelProps={{ style: { color: 'white' } }}
                 InputProps={{ style: { color: 'white' } }}
               />
@@ -452,8 +521,8 @@ function GitPage({ onBackToMenu }) {
                 variant="outlined"
                 fullWidth
                 margin="normal"
-                value={githubUsername}
-                onChange={(e) => setGithubUsername(e.target.value)}
+                value={repoTabs[currentTab].githubUsername}
+                onChange={(e) => handleRepoInputChange(currentTab, 'githubUsername', e.target.value)}
                 InputLabelProps={{ style: { color: 'white' } }}
                 InputProps={{ style: { color: 'white' } }}
               />
@@ -462,8 +531,8 @@ function GitPage({ onBackToMenu }) {
                 variant="outlined"
                 fullWidth
                 margin="normal"
-                value={githubToken}
-                onChange={(e) => setGithubToken(e.target.value)}
+                value={repoTabs[currentTab].githubToken}
+                onChange={(e) => handleRepoInputChange(currentTab, 'githubToken', e.target.value)}
                 InputLabelProps={{ style: { color: 'white' } }}
                 InputProps={{ style: { color: 'white' } }}
               />
@@ -472,8 +541,8 @@ function GitPage({ onBackToMenu }) {
                 variant="outlined"
                 fullWidth
                 margin="normal"
-                value={branchName}
-                onChange={(e) => setBranchName(e.target.value)}
+                value={repoTabs[currentTab].branchName}
+                onChange={(e) => handleRepoInputChange(currentTab, 'branchName', e.target.value)}
                 InputLabelProps={{ style: { color: 'white' } }}
                 InputProps={{ style: { color: 'white' } }}
               />
@@ -482,8 +551,8 @@ function GitPage({ onBackToMenu }) {
                 variant="outlined"
                 fullWidth
                 margin="normal"
-                value={localPath}
-                onChange={(e) => setLocalPath(e.target.value)}
+                value={repoTabs[currentTab].localPath}
+                onChange={(e) => handleRepoInputChange(currentTab, 'localPath', e.target.value)}
                 InputLabelProps={{ style: { color: 'white' } }}
                 InputProps={{ style: { color: 'white' } }}
               />
@@ -492,8 +561,8 @@ function GitPage({ onBackToMenu }) {
                 variant="outlined"
                 fullWidth
                 margin="normal"
-                value={repoUrl}
-                onChange={(e) => setRepoUrl(e.target.value)}
+                value={repoTabs[currentTab].repoUrl}
+                onChange={(e) => handleRepoInputChange(currentTab, 'repoUrl', e.target.value)}
                 InputLabelProps={{ style: { color: 'white' } }}
                 InputProps={{ style: { color: 'white' } }}
               />
