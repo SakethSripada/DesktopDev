@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import ChatPage from './Components/Pages/ChatPage';
 import GitPage from './Components/Pages/GitPage';
 import MainMenu from './Components/Pages/MainMenu';
+import ScaffoldingPage from './Components/Pages/ScaffoldingPage';
 import './App.css';
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
       {selectedTool === null && <MainMenu onSelectTool={handleSelectTool} />}
       {selectedTool === 'chat' && <ChatPage onBackToMenu={handleBackToMenu} />}
       {selectedTool === 'git' && <GitPage onBackToMenu={handleBackToMenu} />}
+      {selectedTool === 'scaffolding' && <ScaffoldingPage onBackToMenu={handleBackToMenu} />}
     </div>
   );
 }

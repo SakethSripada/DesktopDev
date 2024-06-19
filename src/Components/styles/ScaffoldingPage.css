@@ -1,0 +1,49 @@
+.container {
+  padding: 20px;
+  color: white;
+  background-color: #1e1e1e;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.menu-button {
+  align-self: flex-start;
+  margin-bottom: 20px;
+}
+
+.title {
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.section {
+  margin-bottom: 20px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.path-input {
+  max-width: 400px;
+  width: 100%;
+}
+
+.option-button {
+  min-width: 120px;
+}
+
+.icon {
+  margin-right: 8px;
+}
+
+.or-text {
+  margin: 20px 0;
+  text-align: center;
+}
+
+.scaffold-button-section {
+  margin-top: 40px;
+}

@@ -14,7 +14,7 @@ function MainMenu({ onSelectTool }) {
       <Button variant="contained" color="primary" onClick={() => onSelectTool('git')}>
         Git Tools
       </Button>
-      <Button variant="contained" color="primary">
+      <Button variant="contained" color="primary" onClick={() => onSelectTool('scaffolding')}>
         Project Scaffolding
       </Button>
     </Box>
