@@ -3,6 +3,7 @@ import ChatPage from './Components/Pages/ChatPage';
 import GitPage from './Components/Pages/GitPage';
 import MainMenu from './Components/Pages/MainMenu';
 import ScaffoldingPage from './Components/Pages/ScaffoldingPage';
+import RequestPage from './Components/Pages/RequestPage';
 import './App.css';
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
       {selectedTool === 'chat' && <ChatPage onBackToMenu={handleBackToMenu} />}
       {selectedTool === 'git' && <GitPage onBackToMenu={handleBackToMenu} />}
       {selectedTool === 'scaffolding' && <ScaffoldingPage onBackToMenu={handleBackToMenu} />}
+      {selectedTool === 'request' && <RequestPage onBackToMenu={handleBackToMenu} />}
     </div>
   );
 }

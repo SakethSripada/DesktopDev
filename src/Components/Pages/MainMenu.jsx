@@ -17,6 +17,9 @@ function MainMenu({ onSelectTool }) {
       <Button variant="contained" color="primary" onClick={() => onSelectTool('scaffolding')}>
         Project Scaffolding
       </Button>
+      <Button variant="contained" color="primary" onClick={() => onSelectTool('request')}>
+        Requests
+      </Button>
     </Box>
   );
 }
