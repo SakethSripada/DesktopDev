@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Button, TextField, Typography, Grid, Tabs, Tab, AppBar, Dialog, DialogActions, DialogContent, DialogTitle, Checkbox, FormControlLabel, FormGroup, Menu, MenuItem } from '@mui/material';
 import axios from 'axios';
+import Alert from '../Alert'; 
 import '../styles/GitPage.css';
 
 function GitPage({ onBackToMenu }) {
@@ -28,6 +29,9 @@ function GitPage({ onBackToMenu }) {
   const [branches, setBranches] = useState([]);
   const [currentBranch, setCurrentBranch] = useState('');
   const [selectedCommitBranch, setSelectedCommitBranch] = useState('');
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertSeverity, setAlertSeverity] = useState('info');
 
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
@@ -54,13 +58,13 @@ function GitPage({ onBackToMenu }) {
     try {
       const { repoUrl, localPath } = repoTabs[currentTab];
       const response = await axios.post('http://localhost:5000/connect-repo', { repoUrl, localPath });
-      alert(response.data.message);
+      showAlert(response.data.message, 'success');
     } catch (error) {
       console.error('Error connecting to repository:', error);
       if (error.response && error.response.data) {
-        alert(`Error: ${error.response.data.error}`);
+        showAlert(`Error: ${error.response.data.error}`, 'error');
       } else {
-        alert('An unknown error occurred.');
+        showAlert('An unknown error occurred.', 'error');
       }
     }
   };
@@ -69,9 +73,9 @@ function GitPage({ onBackToMenu }) {
     try {
       const { localPath } = repoTabs[currentTab];
       const response = await axios.post('http://localhost:5000/run-commit', { commitHash, localPath });
-      alert(response.data.message);
+      showAlert(response.data.message, 'success');
     } catch (error) {
-      alert(`Error: ${error.response.data.error}`);
+      showAlert(`Error: ${error.response.data.error}`, 'error');
     }
   };
 
@@ -81,7 +85,7 @@ function GitPage({ onBackToMenu }) {
       const response = await axios.post('http://localhost:5000/get-status', { localPath });
       setFiles(response.data.changedFiles);
     } catch (error) {
-      alert(`Error: ${error.response.data.error}`);
+      showAlert(`Error: ${error.response.data.error}`, 'error');
     }
   };
 
@@ -123,14 +127,14 @@ function GitPage({ onBackToMenu }) {
       const branchToCommit = selectedCommitBranch || currentBranch;
       await axios.post('http://localhost:5000/checkout', { branchName: branchToCommit, localPath }); 
       const response = await axios.post('http://localhost:5000/commit', { commitMessage, filesToCommit, localPath, autoStage });
-      alert(response.data.message);
+      showAlert(response.data.message, 'success');
       handleModalClose();
     } catch (error) {
       if (error.response.data.error === 'One or more files are not staged.') {
         setStageFilesError(true);
         setUnstagedFiles(error.response.data.unstagedFiles);
       } else {
-        alert(`Error: ${error.response.data.error}`);
+        showAlert(`Error: ${error.response.data.error}`, 'error');
       }
     }
   };
@@ -139,11 +143,11 @@ function GitPage({ onBackToMenu }) {
     try {
       const { localPath } = repoTabs[currentTab];
       const response = await axios.post('http://localhost:5000/stage-files', { filesToCommit: selectedFiles.join(','), localPath });
-      alert(response.data.message);
+      showAlert(response.data.message, 'success');
       setStageFilesError(false);
       setUnstagedFiles([]);
     } catch (error) {
-      alert(`Error: ${error.response.data.error}`);
+      showAlert(`Error: ${error.response.data.error}`, 'error');
     }
   };
 
@@ -151,10 +155,10 @@ function GitPage({ onBackToMenu }) {
     try {
       const { branchName, localPath, repoUrl, githubUsername, githubToken } = repoTabs[currentTab];
       const response = await axios.post('http://localhost:5000/push', { branchName, localPath, remoteUrl: repoUrl, githubUsername, githubToken });
-      alert(response.data.message);
+      showAlert(response.data.message, 'success');
       handleModalClose();
     } catch (error) {
-      alert(`Error: ${error.response.data.error}`);
+      showAlert(`Error: ${error.response.data.error}`, 'error');
     }
   };
 
@@ -162,10 +166,10 @@ function GitPage({ onBackToMenu }) {
     try {
       const { branchName, localPath, repoUrl, githubUsername, githubToken } = repoTabs[currentTab];
       const response = await axios.post('http://localhost:5000/pull', { branchName, localPath, remoteUrl: repoUrl, githubUsername, githubToken });
-      alert(response.data.message);
+      showAlert(response.data.message, 'success');
       handleModalClose();
     } catch (error) {
-      alert(`Error: ${error.response.data.error}`);
+      showAlert(`Error: ${error.response.data.error}`, 'error');
     }
   };
 
@@ -208,11 +212,11 @@ function GitPage({ onBackToMenu }) {
     try {
       const { localPath } = repoTabs[currentTab];
       const response = await axios.post('http://localhost:5000/stash', { stashMessage, localPath });
-      alert(response.data.message);
+      showAlert(response.data.message, 'success');
       handleModalClose();
     }
     catch (error) {
-      alert(`Error: ${error.response.data.error}`);
+      showAlert(`Error: ${error.response.data.error}`, 'error');
     }
   };
 
@@ -220,11 +224,11 @@ function GitPage({ onBackToMenu }) {
     try {
       const { localPath } = repoTabs[currentTab];
       const response = await axios.post('http://localhost:5000/checkout', { branchName: checkoutBranch, localPath });
-      alert(response.data.message);
+      showAlert(response.data.message, 'success');
       handleModalClose();
       fetchBranches(); 
     } catch (error) {
-      alert(`Error: ${error.response.data.error}`);
+      showAlert(`Error: ${error.response.data.error}`, 'error');
     }
   };
 
@@ -235,7 +239,7 @@ function GitPage({ onBackToMenu }) {
       setBranches(response.data.branches);
       setCurrentBranch(response.data.currentBranch);
     } catch (error) {
-      alert(`Error: ${error.response.data.error}`);
+      showAlert(`Error: ${error.response.data.error}`, 'error');
     }
   }, [currentTab, repoTabs]);
   
@@ -255,6 +259,16 @@ function GitPage({ onBackToMenu }) {
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   const totalPages = Math.ceil(filteredFiles.length / filesPerPage);
+
+  const showAlert = (message, severity) => {
+    setAlertMessage(message);
+    setAlertSeverity(severity);
+    setAlertOpen(true);
+  };
+
+  const handleAlertClose = () => {
+    setAlertOpen(false);
+  };
 
   return (
     <Box className="git-page-container" sx={{ color: 'white' }}>
@@ -781,6 +795,13 @@ function GitPage({ onBackToMenu }) {
         </Button>
         </DialogActions>
       </Dialog>
+      
+      <Alert
+        open={alertOpen}
+        onClose={handleAlertClose}
+        severity={alertSeverity}
+        message={alertMessage}
+      />
     </Box>
   );
 }
