@@ -6,6 +6,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    box-sizing: border-box;
   }
   
   .menu-button {
@@ -38,19 +39,19 @@
   }
   
   .send-button {
-    margin-top: 20px;
+    margin-top: 30px;
     width: 100%;
   }
   
-  .MuiOutlinedInput-root {
-    & fieldset {
-      border-color: transparent;
-    }
-    &:hover fieldset {
-      border-color: transparent;
-    }
-    &.Mui-focused fieldset {
-      border-color: transparent;
-    }
+  .MuiOutlinedInput-root fieldset {
+    border-color: transparent;
+  }
+  
+  .MuiOutlinedInput-root:hover fieldset {
+    border-color: transparent;
+  }
+  
+  .MuiOutlinedInput-root.Mui-focused fieldset {
+    border-color: transparent;
   }
   

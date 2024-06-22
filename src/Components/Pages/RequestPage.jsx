@@ -43,7 +43,7 @@ const RequestPage = ({ onBackToMenu }) => {
       <Typography variant="h4" component="h1" className="title">
         HTTP Request
       </Typography>
-      <Box className="request-form">
+      <Box className="request-form" style={{ marginTop: '30px' }}>
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} sm={3}>
             <FormControl fullWidth variant="outlined">
@@ -86,7 +86,7 @@ const RequestPage = ({ onBackToMenu }) => {
           <Typography variant="h6" component="h2" gutterBottom>
             Headers
           </Typography>
-          <Grid container spacing={2} alignItems="center">
+          <Grid container spacing={2} alignItems="center" style={{ marginTop: '10px' }}>
             {headers.map((header, index) => (
               <Grid container spacing={2} alignItems="center" key={index} className="header-row">
                 <Grid item xs={5}>
@@ -147,7 +147,7 @@ const RequestPage = ({ onBackToMenu }) => {
             />
           </Box>
         )}
-        <Button variant="contained" color="primary" className="send-button">
+        <Button variant="contained" color="primary" className="send-button" style={{ marginTop: '30px' }}>
           Send
         </Button>
       </Box>
