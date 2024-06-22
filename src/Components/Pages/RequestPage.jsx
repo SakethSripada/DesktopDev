@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Box, Button, TextField, Typography, Grid, Select, MenuItem, FormControl, IconButton, InputLabel, OutlinedInput } from '@mui/material';
+import { Box, Button, TextField, Typography, Grid, FormControl, IconButton, Autocomplete, InputLabel, Select, MenuItem, OutlinedInput } from '@mui/material';
 import { FaPlusCircle, FaMinusCircle } from 'react-icons/fa';
+import axios from 'axios';
 import '../styles/RequestPage.css';
 
 const requestMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'];
@@ -15,11 +16,22 @@ const methodColors = {
   HEAD: '#00BCD4'
 };
 
+const commonHeaders = [
+  'Content-Type',
+  'Authorization',
+  'Accept',
+  'User-Agent',
+  'Cache-Control',
+  'Referer',
+  'Accept-Encoding'
+];
+
 const RequestPage = ({ onBackToMenu }) => {
   const [method, setMethod] = useState('GET');
   const [url, setUrl] = useState('');
   const [headers, setHeaders] = useState([{ key: '', value: '' }]);
   const [body, setBody] = useState('');
+  const [response, setResponse] = useState(null);
 
   const handleAddHeader = () => {
     setHeaders([...headers, { key: '', value: '' }]);
@@ -33,6 +45,23 @@ const RequestPage = ({ onBackToMenu }) => {
     const newHeaders = headers.slice();
     newHeaders[index][field] = value;
     setHeaders(newHeaders);
+  };
+
+  const handleSubmit = async () => {
+    const validHeaders = headers.filter(header => header.key.trim() !== '' && header.value.trim() !== '');
+
+    try {
+      const res = await axios.post('http://localhost:5000/request', {
+        method,
+        url,
+        headers: validHeaders,
+        body: (method === 'POST' || method === 'PUT' || method === 'PATCH') ? body : undefined
+      });
+
+      setResponse(res.data);
+    } catch (error) {
+      setResponse({ error: error.response ? error.response.data : error.message });
+    }
   };
 
   return (
@@ -90,14 +119,20 @@ const RequestPage = ({ onBackToMenu }) => {
             {headers.map((header, index) => (
               <Grid container spacing={2} alignItems="center" key={index} className="header-row">
                 <Grid item xs={5}>
-                  <TextField
-                    label="Key"
-                    variant="outlined"
-                    fullWidth
-                    value={header.key}
-                    onChange={(e) => handleHeaderChange(index, 'key', e.target.value)}
-                    InputLabelProps={{ style: { color: 'white' } }}
-                    InputProps={{ style: { color: 'white' } }}
+                  <Autocomplete
+                    freeSolo
+                    options={commonHeaders}
+                    inputValue={header.key}
+                    onInputChange={(event, newInputValue) => handleHeaderChange(index, 'key', newInputValue)}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Header Key"
+                        variant="outlined"
+                        InputLabelProps={{ style: { color: 'white' } }}
+                        InputProps={{ ...params.InputProps, style: { color: 'white', backgroundColor: '#333' } }}
+                      />
+                    )}
                   />
                 </Grid>
                 <Grid item xs={5}>
@@ -147,10 +182,26 @@ const RequestPage = ({ onBackToMenu }) => {
             />
           </Box>
         )}
-        <Button variant="contained" color="primary" className="send-button" style={{ marginTop: '30px' }}>
+        <Button
+          variant="contained"
+          color="primary"
+          className="send-button"
+          style={{ marginTop: '30px' }}
+          onClick={handleSubmit}
+        >
           Send
         </Button>
       </Box>
+      {response && (
+        <Box className="response-section">
+          <Typography variant="h6" component="h2" gutterBottom>
+            Response
+          </Typography>
+          <pre className="response-content">
+            {JSON.stringify(response, null, 2)}
+          </pre>
+        </Box>
+      )}
     </Box>
   );
 };
