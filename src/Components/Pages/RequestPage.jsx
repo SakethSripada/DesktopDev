@@ -18,6 +18,8 @@ import {
 } from '@mui/material';
 import { FaPlusCircle, FaMinusCircle } from 'react-icons/fa';
 import axios from 'axios';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 const requestMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'];
 
@@ -219,9 +221,9 @@ const RequestPage = ({ onBackToMenu }) => {
             <Typography variant="h6" component="h2" sx={{ mb: 2, color: 'white' }}>
               Response
             </Typography>
-            <pre style={{ color: 'white' }}>
+            <SyntaxHighlighter language="json" style={oneDark}>
               {JSON.stringify(response, null, 2)}
-            </pre>
+            </SyntaxHighlighter>
           </CardContent>
         </Card>
       )}
