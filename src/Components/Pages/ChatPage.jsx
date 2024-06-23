@@ -9,12 +9,15 @@ import {
   Typography,
   TextField,
   CircularProgress,
+  Autocomplete,
+  Chip,
 } from '@mui/material';
-import { FaCopy } from 'react-icons/fa';
+import { FaCopy, FaCheckCircle } from 'react-icons/fa';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Alert from '../Alert';
+import axios from 'axios';
 
 const theme = createTheme({
   palette: {
@@ -38,9 +41,19 @@ function ChatPage({ onBackToMenu }) {
   const [path, setPath] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [alert, setAlert] = useState({ open: false, severity: '', message: '' });
+  const [files, setFiles] = useState([]);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [isConnected, setIsConnected] = useState(false);
 
   const handleInputChange = (e) => {
     setInput(e.target.value);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
   };
 
   const handlePathChange = (e) => {
@@ -80,12 +93,6 @@ function ChatPage({ onBackToMenu }) {
     }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSendMessage();
-    }
-  };
-
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text).then(() => {
       setAlert({ open: true, severity: 'success', message: 'Copied to clipboard!' });
@@ -95,9 +102,37 @@ function ChatPage({ onBackToMenu }) {
     });
   };
 
-  const handlePathSubmit = (e) => {
+  const handlePathSubmit = async (e) => {
     e.preventDefault();
-    console.log('Path submitted:', path);
+    try {
+      const response = await axios.post('http://localhost:5000/api/list-files', { path });
+      setFiles(response.data.files);
+      setIsConnected(true);
+      setAlert({ open: true, severity: 'success', message: 'Connected to project path successfully!' });
+    } catch (error) {
+      console.error('Error listing files:', error);
+      setAlert({ open: true, severity: 'error', message: 'Failed to list files.' });
+      setIsConnected(false);
+    }
+  };
+
+  const handleFileSelect = async (event, newValue) => {
+    setSelectedFiles(newValue);
+
+    try {
+      const fileContents = await Promise.all(newValue.map(async (filePath) => {
+        const response = await axios.post('http://localhost:5000/api/read-file', {
+          projectPath: path,
+          filePath,
+        });
+        return `Content of ${filePath}:\n${response.data.content}`;
+      }));
+
+      setInput(fileContents.join('\n\n'));
+    } catch (error) {
+      console.error('Error reading file:', error);
+      setAlert({ open: true, severity: 'error', message: 'Failed to read file.' });
+    }
   };
 
   const handleCloseAlert = () => {
@@ -122,7 +157,59 @@ function ChatPage({ onBackToMenu }) {
               Submit
             </Button>
           </Paper>
+          {isConnected && (
+            <Box sx={{ display: 'flex', alignItems: 'center', color: 'green', mb: 2 }}>
+              <FaCheckCircle style={{ marginRight: '8px' }} />
+              <Typography>Connected</Typography>
+            </Box>
+          )}
         </Box>
+        {files.length > 0 && (
+          <Box sx={{ mb: 2 }}>
+            <Autocomplete
+              multiple
+              options={files}
+              getOptionLabel={(option) => option}
+              value={selectedFiles}
+              onChange={handleFileSelect}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                  <Chip
+                    variant="outlined"
+                    label={option}
+                    {...getTagProps({ index })}
+                    sx={{ color: 'white', borderColor: 'white' }}
+                  />
+                ))
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  variant="outlined"
+                  placeholder="Select files"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      color: 'white',
+                      '& fieldset': {
+                        borderColor: 'white',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: 'white',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: 'white',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: 'white',
+                    },
+                  }}
+                />
+              )}
+              sx={{ backgroundColor: '#2e2e2e', borderRadius: 1, color: 'white' }}
+            />
+          </Box>
+        )}
         <Paper sx={{ p: 2, height: '60vh', overflow: 'auto', backgroundColor: theme.palette.background.default }}>
           {messages.map((msg, index) => (
             <Box key={index} sx={{ mb: 2, textAlign: msg.sender === 'user' ? 'right' : 'left' }}>
@@ -180,7 +267,7 @@ function ChatPage({ onBackToMenu }) {
             </Box>
           )}
         </Paper>
-        <Box sx={{ mt: 2 }}>
+        <Box sx={{ mt: 2, position: 'sticky', bottom: 0, backgroundColor: theme.palette.background.default }}>
           <Paper component="form" onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} sx={{ display: 'flex', alignItems: 'center', p: 1 }}>
             <TextField
               value={input}
@@ -189,7 +276,8 @@ function ChatPage({ onBackToMenu }) {
               placeholder="Type a message..."
               variant="outlined"
               fullWidth
-              sx={{ mr: 1, '& .MuiOutlinedInput-root': { height: '40px' } }}
+              multiline
+              sx={{ mr: 1, '& .MuiOutlinedInput-root': { height: 'auto' } }}
             />
             <Button type="submit" variant="contained" color="primary">
               Send
