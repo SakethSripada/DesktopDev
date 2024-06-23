@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -20,7 +20,7 @@ import {
   DialogContentText,
   DialogActions,
 } from '@mui/material';
-import { FaCopy, FaCheckCircle, FaPlay, FaFolder, FaFile, FaChevronUp, FaChevronDown } from 'react-icons/fa';
+import { FaCopy, FaCheckCircle, FaPlay, FaFolder, FaChevronUp, FaChevronDown, FaFileImport, FaFile} from 'react-icons/fa';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
@@ -54,9 +54,20 @@ function ChatPage({ onBackToMenu }) {
   const [isConnected, setIsConnected] = useState(false);
   const [commandToExecute, setCommandToExecute] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isInsertModalOpen, setIsInsertModalOpen] = useState(false);
   const [currentDirectory, setCurrentDirectory] = useState('');
-  const [subDirectory, setSubDirectory] = useState('');
+  const [newFileName, setNewFileName] = useState('');
+  const [codeToInsert, setCodeToInsert] = useState('');
   const [isFileSelectionOpen, setIsFileSelectionOpen] = useState(true);
+  const [fileInsertPath, setFileInsertPath] = useState('');
+  const [directoryTree, setDirectoryTree] = useState([]);
+
+  useEffect(() => {
+    if (isConnected) {
+      setFileInsertPath(path);
+      fetchDirectoryTree();
+    }
+  }, [isConnected, path]);
 
   const handleInputChange = (e) => {
     setInput(e.target.value);
@@ -116,6 +127,10 @@ function ChatPage({ onBackToMenu }) {
   };
 
   const handleExecute = (command) => {
+    if (!isConnected) {
+      setAlert({ open: true, severity: 'warning', message: 'No path connected. Please connect to a path first.' });
+      return;
+    }
     setCommandToExecute(command);
     setIsModalOpen(true);
   };
@@ -124,7 +139,7 @@ function ChatPage({ onBackToMenu }) {
     setIsModalOpen(false);
     try {
       const response = await axios.post('http://localhost:5000/api/execute-command', {
-        path: currentDirectory ? path + '/' + currentDirectory : path,
+        path: fileInsertPath,
         command: commandToExecute,
       });
       setAlert({ open: true, severity: 'success', message: `Command executed: ${response.data.output}` });
@@ -202,6 +217,64 @@ function ChatPage({ onBackToMenu }) {
     setAlert({ open: false, severity: '', message: '' });
   };
 
+  const handleInsert = (code) => {
+    if (!isConnected) {
+      setAlert({ open: true, severity: 'warning', message: 'No path connected. Please connect to a path first.' });
+      return;
+    }
+
+    const cleanedCode = code.replace(/```(\w*\n)?([\s\S]*?)```/g, '$2').trim();
+
+    setCodeToInsert(cleanedCode);
+    setIsInsertModalOpen(true);
+  };
+
+  const handleInsertConfirm = async () => {
+    setIsInsertModalOpen(false);
+    try {
+      const response = await axios.post('http://localhost:5000/api/insert-code', {
+        path: fileInsertPath,
+        fileName: newFileName,
+        code: codeToInsert,
+      });
+      setAlert({ open: true, severity: 'success', message: `Code inserted into file: ${newFileName}` });
+    } catch (error) {
+      console.error('Error inserting code:', error);
+      setAlert({ open: true, severity: 'error', message: 'Failed to insert code into file.' });
+    }
+  };
+
+  const fetchDirectoryTree = async () => {
+    try {
+      const response = await axios.post('http://localhost:5000/api/list-files', { path });
+      setDirectoryTree(response.data.filesAndDirs.filter(item => item.isDirectory));
+    } catch (error) {
+      console.error('Error fetching directory tree:', error);
+    }
+  };
+
+  const renderDirectoryTree = (tree, basePath) => (
+    <List>
+      {tree.map((item) => (
+        <ListItem
+          key={item.name}
+          button
+          onClick={() => setFileInsertPath(basePath + '/' + item.name)}
+          sx={{
+            pl: basePath === path ? 2 : 4,
+            backgroundColor: fileInsertPath === basePath + '/' + item.name ? 'rgba(160, 36, 180, 0.3)' : 'inherit',
+          }}
+        >
+          <ListItemIcon>
+            <FaFolder color="yellow" />
+          </ListItemIcon>
+          <ListItemText primary={item.name} />
+          {item.children && renderDirectoryTree(item.children, basePath + '/' + item.name)}
+        </ListItem>
+      ))}
+    </List>
+  );
+
   return (
     <ThemeProvider theme={theme}>
       <Container maxWidth="lg">
@@ -243,10 +316,10 @@ function ChatPage({ onBackToMenu }) {
               )}
               <List>
                 {filesAndDirs.map((item) => (
-                  <ListItem 
-                    button 
-                    key={item.name} 
-                    onClick={() => handleFileSelect(item.name)} 
+                  <ListItem
+                    button
+                    key={item.name}
+                    onClick={() => handleFileSelect(item.name)}
                     sx={{ backgroundColor: selectedFiles.includes(item.name) ? 'rgba(160, 36, 180, 0.3)' : 'inherit' }}
                   >
                     <ListItemIcon>
@@ -283,36 +356,44 @@ function ChatPage({ onBackToMenu }) {
                         <SyntaxHighlighter language={language} style={oneDark}>
                           {codeContent}
                         </SyntaxHighlighter>
-                        <IconButton
-                          onClick={() => handleCopy(part)}
-                          size="small"
-                          sx={{
-                            position: 'absolute',
-                            top: 8,
-                            right: 36, 
-                            backgroundColor: '#3e3e3e',
-                            '&:hover': {
-                              backgroundColor: '#4e4e4e',
-                            },
-                          }}
-                        >
-                          <FaCopy style={{ color: '#007bff' }} />
-                        </IconButton>
-                        <IconButton
-                          onClick={() => handleExecute(part)}
-                          size="small"
-                          sx={{
-                            position: 'absolute',
-                            top: 8,
-                            right: 8,
-                            backgroundColor: '#3e3e3e',
-                            '&:hover': {
-                              backgroundColor: '#4e4e4e',
-                            },
-                          }}
-                        >
-                          <FaPlay style={{ color: '#007bff' }} />
-                        </IconButton>
+                        <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 2 }}>
+                          <IconButton
+                            onClick={() => handleCopy(part)}
+                            size="small"
+                            sx={{
+                              backgroundColor: '#3e3e3e',
+                              '&:hover': {
+                                backgroundColor: '#4e4e4e',
+                              },
+                            }}
+                          >
+                            <FaCopy style={{ color: '#007bff' }} />
+                          </IconButton>
+                          <IconButton
+                            onClick={() => handleExecute(part)}
+                            size="small"
+                            sx={{
+                              backgroundColor: '#3e3e3e',
+                              '&:hover': {
+                                backgroundColor: '#4e4e4e',
+                              },
+                            }}
+                          >
+                            <FaPlay style={{ color: '#007bff' }} />
+                          </IconButton>
+                          <IconButton
+                            onClick={() => handleInsert(part)}
+                            size="small"
+                            sx={{
+                              backgroundColor: '#3e3e3e',
+                              '&:hover': {
+                                backgroundColor: '#4e4e4e',
+                              },
+                            }}
+                          >
+                            <FaFileImport style={{ color: '#007bff' }} />
+                          </IconButton>
+                        </Box>
                       </Box>
                     );
                   } else {
@@ -359,14 +440,6 @@ function ChatPage({ onBackToMenu }) {
             <Paper sx={{ p: 2, mt: 1, mb: 2 }}>
               <Typography>{commandToExecute}</Typography>
             </Paper>
-            <TextField
-              label="Sub-directory (optional)"
-              variant="outlined"
-              fullWidth
-              value={subDirectory}
-              onChange={(e) => setSubDirectory(e.target.value)}
-              sx={{ mb: 2 }}
-            />
             <DialogContentText>
               Confirm the execution of this command in the specified directory.
             </DialogContentText>
@@ -377,6 +450,56 @@ function ChatPage({ onBackToMenu }) {
             </Button>
             <Button onClick={handleExecuteConfirm} color="primary">
               Execute
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog open={isInsertModalOpen} onClose={() => setIsInsertModalOpen(false)}>
+          <DialogTitle>Insert Code</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              You are about to insert the following code into a new file:
+            </DialogContentText>
+            <Paper sx={{ p: 2, mt: 1, mb: 2 }}>
+              <Typography>{codeToInsert}</Typography>
+            </Paper>
+            <TextField
+              label="New file name"
+              variant="outlined"
+              fullWidth
+              value={newFileName}
+              onChange={(e) => setNewFileName(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+            <Box>
+              <Typography variant="subtitle1">Select Directory:</Typography>
+              <List>
+                <ListItem
+                  button
+                  onClick={() => setFileInsertPath(path)}
+                  sx={{
+                    pl: 2,
+                    backgroundColor: fileInsertPath === path ? 'rgba(160, 36, 180, 0.3)' : 'inherit',
+                  }}
+                >
+                  <ListItemIcon>
+                    <FaFolder color="yellow" />
+                  </ListItemIcon>
+                  <ListItemText primary="Root Directory" />
+                </ListItem>
+              </List>
+              {renderDirectoryTree(directoryTree, path)}
+            </Box>
+            <DialogContentText>
+              Confirm the name of the new file and the directory where this code will be inserted.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setIsInsertModalOpen(false)} color="secondary">
+              Cancel
+            </Button>
+            <Button onClick={handleInsertConfirm} color="primary">
+              Insert
             </Button>
           </DialogActions>
         </Dialog>

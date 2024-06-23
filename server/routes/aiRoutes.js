@@ -107,4 +107,30 @@ router.post('/execute-command', (req, res) => {
   });
 });
 
+router.post('/insert-code', (req, res) => {
+  const { path: projectPath, fileName, code } = req.body;
+
+  if (!projectPath || typeof projectPath !== 'string') {
+    console.error('Invalid project path:', projectPath);
+    return res.status(400).json({ error: 'Valid project path is required' });
+  }
+
+  if (!fileName || typeof fileName !== 'string') {
+    console.error('Invalid file name:', fileName);
+    return res.status(400).json({ error: 'Valid file name is required' });
+  }
+
+  const fullPath = path.join(projectPath, fileName);
+
+  fs.writeFile(fullPath, code, 'utf8', (err) => {
+    if (err) {
+      console.error('Error writing file:', err);
+      return res.status(500).json({ error: 'Error writing file' });
+    }
+
+    res.json({ message: `Code inserted into file: ${fileName}` });
+  });
+});
+
+
 module.exports = router;
