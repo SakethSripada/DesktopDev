@@ -1,23 +1,34 @@
 import React, { useState } from 'react';
 import { Box, Button, TextField, Typography, Grid } from '@mui/material';
-import { FaReact, FaVuejs, FaAngular, FaNodeJs, FaLaravel, FaRuby, FaPython, FaPhp, FaJava, FaSwift, FaWordpress } from 'react-icons/fa';
-import { DiDjango, DiMongodb, DiWordpress } from 'react-icons/di';
-import { SiFlask, SiSvelte, SiNextdotjs, SiPostgresql, SiExpress, SiSpring, SiKotlin, SiGatsby, SiNuxtdotjs, SiElectron, SiDotnet, SiNestjs, SiDocker, SiFlutter, SiRubyonrails, SiStrapi } from 'react-icons/si';
+import axios from 'axios';
+import {
+  FaReact, FaVuejs, FaAngular, FaNodeJs, FaLaravel, FaRuby, FaPython,
+  FaPhp, FaJava, FaSwift, FaWordpress
+} from 'react-icons/fa';
+import {
+  DiDjango, DiMongodb, DiWordpress
+} from 'react-icons/di';
+import {
+  SiFlask, SiSvelte, SiNextdotjs, SiPostgresql, SiExpress, SiSpring,
+  SiKotlin, SiGatsby, SiNuxtdotjs, SiElectron, SiDotnet, SiNestjs,
+  SiDocker, SiFlutter, SiRubyonrails, SiStrapi
+} from 'react-icons/si';
 import '../styles/ScaffoldingPage.css';
+import Alert from '../Alert';
 
 const frameworks = [
   { name: 'React', icon: <FaReact />, color: '#61DAFB' },
   { name: 'Vue', icon: <FaVuejs />, color: '#42b883' },
   { name: 'Angular', icon: <FaAngular />, color: '#DD0031' },
   { name: 'Svelte', icon: <SiSvelte />, color: '#FF3E00' },
-  { name: 'Next.js', icon: <SiNextdotjs />, color: '#000000' },
+  { name: 'Next.js', icon: <SiNextdotjs />, color: '#808080' },  
   { name: 'Nuxt.js', icon: <SiNuxtdotjs />, color: '#00C58E' },
   { name: 'Gatsby', icon: <SiGatsby />, color: '#663399' },
-  { name: 'Flask', icon: <SiFlask />, color: '#000000' },
+  { name: 'Flask', icon: <SiFlask />, color: '#808080' }, 
   { name: 'Django', icon: <DiDjango />, color: '#092E20' },
   { name: 'Laravel', icon: <FaLaravel />, color: '#FF2D20' },
   { name: 'Ruby on Rails', icon: <SiRubyonrails />, color: '#CC0000' },
-  { name: 'Express', icon: <SiExpress />, color: '#000000' },
+  { name: 'Express', icon: <SiExpress />, color: '#808080' },  
   { name: 'Spring', icon: <SiSpring />, color: '#6DB33F' },
   { name: '.NET', icon: <SiDotnet />, color: '#512BD4' },
   { name: 'NestJS', icon: <SiNestjs />, color: '#E0234E' },
@@ -46,6 +57,7 @@ function ScaffoldingPage({ onBackToMenu }) {
   const [projectPath, setProjectPath] = useState('');
   const [selectedFramework, setSelectedFramework] = useState('');
   const [selectedStack, setSelectedStack] = useState('');
+  const [alert, setAlert] = useState({ open: false, severity: '', message: '' });
 
   const handleFrameworkSelect = (framework) => {
     setSelectedFramework(framework);
@@ -55,6 +67,24 @@ function ScaffoldingPage({ onBackToMenu }) {
   const handleStackSelect = (stack) => {
     setSelectedStack(stack);
     setSelectedFramework('');
+  };
+
+  const handleScaffoldProject = async () => {
+    try {
+      const response = await axios.post('http://localhost:5000/scaffold', {
+        projectPath,
+        selectedFramework,
+        selectedStack,
+      });
+
+      setAlert({ open: true, severity: 'success', message: response.data.message });
+    } catch (error) {
+      setAlert({ open: true, severity: 'error', message: `Error: ${error.response?.data?.error || error.message}` });
+    }
+  };
+
+  const handleCloseAlert = () => {
+    setAlert({ open: false, severity: '', message: '' });
   };
 
   return (
@@ -88,7 +118,11 @@ function ScaffoldingPage({ onBackToMenu }) {
             <Grid item key={framework.name}>
               <Button
                 variant={selectedFramework === framework.name ? 'contained' : 'outlined'}
-                style={{ backgroundColor: framework.color, color: 'white' }}
+                style={{
+                  backgroundColor: selectedFramework === framework.name ? framework.color : 'transparent',
+                  color: 'white',
+                  borderColor: framework.color
+                }}
                 onClick={() => handleFrameworkSelect(framework.name)}
                 startIcon={framework.icon}
                 className="option-button"
@@ -111,7 +145,11 @@ function ScaffoldingPage({ onBackToMenu }) {
             <Grid item key={stack.name}>
               <Button
                 variant={selectedStack === stack.name ? 'contained' : 'outlined'}
-                style={{ backgroundColor: stack.color, color: 'white' }}
+                style={{
+                  backgroundColor: selectedStack === stack.name ? stack.color : 'transparent',
+                  color: 'white',
+                  borderColor: stack.color
+                }}
                 onClick={() => handleStackSelect(stack.name)}
                 startIcon={stack.icon}
                 className="option-button"
@@ -123,10 +161,11 @@ function ScaffoldingPage({ onBackToMenu }) {
         </Grid>
       </Box>
       <Box className="scaffold-button-section">
-        <Button variant="contained" color="primary">
+        <Button variant="contained" color="primary" onClick={handleScaffoldProject}>
           Scaffold Project
         </Button>
       </Box>
+      <Alert open={alert.open} onClose={handleCloseAlert} severity={alert.severity} message={alert.message} />
     </Box>
   );
 }
