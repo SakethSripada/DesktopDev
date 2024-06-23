@@ -6,7 +6,7 @@ function MainMenu({ onSelectTool }) {
   return (
     <Box className="main-menu-container">
       <Typography variant="h4" component="h1" gutterBottom>
-        DevTools Companion
+        DesktopDev
       </Typography>
       <Button variant="contained" color="primary" onClick={() => onSelectTool('chat')}>
         AI Chat

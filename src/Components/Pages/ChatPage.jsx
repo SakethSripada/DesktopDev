@@ -456,7 +456,7 @@ function ChatPage({ onBackToMenu }) {
             </Box>
           )}
         </Paper>
-        <Box sx={{ mt: 2, backgroundColor: theme.palette.background.default }}>
+        <Box sx={{ mt: 2, backgroundColor: theme.palette.background.default, pb: 2 }}>
           <Paper component="form" onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} sx={{ display: 'flex', alignItems: 'center', p: 1 }}>
             <TextField
               value={input}
