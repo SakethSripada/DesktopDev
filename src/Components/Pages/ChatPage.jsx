@@ -19,8 +19,10 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Breadcrumbs,
+  Link,
 } from '@mui/material';
-import { FaCopy, FaCheckCircle, FaPlay, FaFolder, FaChevronUp, FaChevronDown, FaFileImport, FaFile} from 'react-icons/fa';
+import { FaCopy, FaCheckCircle, FaPlay, FaFolder, FaChevronUp, FaChevronDown, FaFileImport, FaFile } from 'react-icons/fa';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
@@ -65,7 +67,7 @@ function ChatPage({ onBackToMenu }) {
   useEffect(() => {
     if (isConnected) {
       setFileInsertPath(path);
-      fetchDirectoryTree();
+      fetchDirectoryTree(path);
     }
   }, [isConnected, path]);
 
@@ -227,6 +229,7 @@ function ChatPage({ onBackToMenu }) {
 
     setCodeToInsert(cleanedCode);
     setIsInsertModalOpen(true);
+    fetchDirectoryTree(fileInsertPath);
   };
 
   const handleInsertConfirm = async () => {
@@ -244,33 +247,74 @@ function ChatPage({ onBackToMenu }) {
     }
   };
 
-  const fetchDirectoryTree = async () => {
+  const fetchDirectoryTree = async (basePath) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/list-files', { path });
+      const response = await axios.post('http://localhost:5000/api/list-files', { path: basePath });
       setDirectoryTree(response.data.filesAndDirs.filter(item => item.isDirectory));
     } catch (error) {
       console.error('Error fetching directory tree:', error);
     }
   };
 
+  const handleBreadcrumbClick = async (index) => {
+    const pathParts = fileInsertPath.split('/');
+    const newPath = pathParts.slice(0, index + 1).join('/');
+    setFileInsertPath(newPath);
+    setCurrentDirectory(newPath.replace(path, '').substring(1));
+
+    try {
+      const response = await axios.post('http://localhost:5000/api/list-files', { path: newPath });
+      setDirectoryTree(response.data.filesAndDirs.filter(item => item.isDirectory));
+    } catch (error) {
+      console.error('Error listing files:', error);
+      setAlert({ open: true, severity: 'error', message: 'Failed to list files.' });
+    }
+  };
+
+  const renderBreadcrumbs = () => {
+    const pathParts = fileInsertPath.split('/');
+    return (
+      <Breadcrumbs aria-label="breadcrumb">
+        {pathParts.map((part, index) => (
+          <Link
+            key={index}
+            color="inherit"
+            onClick={() => handleBreadcrumbClick(index)}
+            sx={{ cursor: 'pointer' }}
+          >
+            {part || 'Root'}
+          </Link>
+        ))}
+      </Breadcrumbs>
+    );
+  };
+
   const renderDirectoryTree = (tree, basePath) => (
     <List>
       {tree.map((item) => (
-        <ListItem
-          key={item.name}
-          button
-          onClick={() => setFileInsertPath(basePath + '/' + item.name)}
-          sx={{
-            pl: basePath === path ? 2 : 4,
-            backgroundColor: fileInsertPath === basePath + '/' + item.name ? 'rgba(160, 36, 180, 0.3)' : 'inherit',
-          }}
-        >
-          <ListItemIcon>
-            <FaFolder color="yellow" />
-          </ListItemIcon>
-          <ListItemText primary={item.name} />
-          {item.children && renderDirectoryTree(item.children, basePath + '/' + item.name)}
-        </ListItem>
+        <React.Fragment key={item.name}>
+          <ListItem
+            button
+            onClick={() => {
+              const newInsertPath = basePath + '/' + item.name;
+              setFileInsertPath(newInsertPath);
+              setCurrentDirectory(newInsertPath.replace(path + '/', ''));
+              fetchDirectoryTree(newInsertPath);
+            }}
+            sx={{
+              pl: basePath === path ? 2 : 4,
+              backgroundColor: fileInsertPath === basePath + '/' + item.name ? 'rgba(160, 36, 180, 0.3)' : 'inherit',
+              '&:hover': {
+                backgroundColor: fileInsertPath === basePath + '/' + item.name ? 'rgba(160, 36, 180, 0.3)' : 'rgba(160, 36, 180, 0.1)',
+              },
+            }}
+          >
+            <ListItemIcon>
+              <FaFolder color="yellow" />
+            </ListItemIcon>
+            <ListItemText primary={item.name} />
+          </ListItem>
+        </React.Fragment>
       ))}
     </List>
   );
@@ -461,7 +505,9 @@ function ChatPage({ onBackToMenu }) {
               You are about to insert the following code into a new file:
             </DialogContentText>
             <Paper sx={{ p: 2, mt: 1, mb: 2 }}>
-              <Typography>{codeToInsert}</Typography>
+              <SyntaxHighlighter language="javascript" style={oneDark}>
+                {codeToInsert}
+              </SyntaxHighlighter>
             </Paper>
             <TextField
               label="New file name"
@@ -473,13 +519,21 @@ function ChatPage({ onBackToMenu }) {
             />
             <Box>
               <Typography variant="subtitle1">Select Directory:</Typography>
+              {renderBreadcrumbs()}
               <List>
                 <ListItem
                   button
-                  onClick={() => setFileInsertPath(path)}
+                  onClick={() => {
+                    setFileInsertPath(path);
+                    setCurrentDirectory('');
+                    fetchDirectoryTree(path);
+                  }}
                   sx={{
                     pl: 2,
                     backgroundColor: fileInsertPath === path ? 'rgba(160, 36, 180, 0.3)' : 'inherit',
+                    '&:hover': {
+                      backgroundColor: fileInsertPath === path ? 'rgba(160, 36, 180, 0.3)' : 'rgba(160, 36, 180, 0.1)',
+                    },
                   }}
                 >
                   <ListItemIcon>
@@ -488,7 +542,7 @@ function ChatPage({ onBackToMenu }) {
                   <ListItemText primary="Root Directory" />
                 </ListItem>
               </List>
-              {renderDirectoryTree(directoryTree, path)}
+              {renderDirectoryTree(directoryTree, fileInsertPath)}
             </Box>
             <DialogContentText>
               Confirm the name of the new file and the directory where this code will be inserted.
