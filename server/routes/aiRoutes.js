@@ -42,13 +42,18 @@ router.post('/list-files', (req, res) => {
     return res.status(400).json({ error: 'Valid project path is required' });
   }
 
-  fs.readdir(projectPath, (err, files) => {
+  fs.readdir(projectPath, { withFileTypes: true }, (err, items) => {
     if (err) {
       console.error('Error reading directory:', err);
       return res.status(500).json({ error: 'Error reading directory' });
     }
 
-    res.json({ files });
+    const filesAndDirs = items.map(item => ({
+      name: item.name,
+      isDirectory: item.isDirectory()
+    }));
+
+    res.json({ filesAndDirs });
   });
 });
 

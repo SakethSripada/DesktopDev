@@ -9,17 +9,18 @@ import {
   Typography,
   TextField,
   CircularProgress,
-  Autocomplete,
-  Chip,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Collapse,
   Dialog,
-  DialogActions,
+  DialogTitle,
   DialogContent,
   DialogContentText,
-  DialogTitle,
-  Select,
-  MenuItem,
+  DialogActions,
 } from '@mui/material';
-import { FaCopy, FaCheckCircle, FaPlay } from 'react-icons/fa';
+import { FaCopy, FaCheckCircle, FaPlay, FaFolder, FaFile, FaChevronUp, FaChevronDown } from 'react-icons/fa';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
@@ -48,12 +49,14 @@ function ChatPage({ onBackToMenu }) {
   const [path, setPath] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [alert, setAlert] = useState({ open: false, severity: '', message: '' });
-  const [files, setFiles] = useState([]);
+  const [filesAndDirs, setFilesAndDirs] = useState([]);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const [commandToExecute, setCommandToExecute] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentDirectory, setCurrentDirectory] = useState('');
   const [subDirectory, setSubDirectory] = useState('');
+  const [isFileSelectionOpen, setIsFileSelectionOpen] = useState(true);
 
   const handleInputChange = (e) => {
     setInput(e.target.value);
@@ -121,7 +124,7 @@ function ChatPage({ onBackToMenu }) {
     setIsModalOpen(false);
     try {
       const response = await axios.post('http://localhost:5000/api/execute-command', {
-        path: subDirectory ? path + '/' + subDirectory : path,
+        path: currentDirectory ? path + '/' + currentDirectory : path,
         command: commandToExecute,
       });
       setAlert({ open: true, severity: 'success', message: `Command executed: ${response.data.output}` });
@@ -135,7 +138,7 @@ function ChatPage({ onBackToMenu }) {
     e.preventDefault();
     try {
       const response = await axios.post('http://localhost:5000/api/list-files', { path });
-      setFiles(response.data.files);
+      setFilesAndDirs(response.data.filesAndDirs);
       setIsConnected(true);
       setAlert({ open: true, severity: 'success', message: 'Connected to project path successfully!' });
     } catch (error) {
@@ -145,22 +148,34 @@ function ChatPage({ onBackToMenu }) {
     }
   };
 
-  const handleFileSelect = async (event, newValue) => {
-    setSelectedFiles(newValue);
+  const handleFileSelect = async (filePath) => {
+    if (filesAndDirs.find((item) => item.name === filePath && item.isDirectory)) {
+      setCurrentDirectory((prev) => (prev ? `${prev}/${filePath}` : filePath));
+      const newPath = path + '/' + (currentDirectory ? `${currentDirectory}/${filePath}` : filePath);
+      try {
+        const response = await axios.post('http://localhost:5000/api/list-files', { path: newPath });
+        setFilesAndDirs(response.data.filesAndDirs);
+      } catch (error) {
+        console.error('Error listing files:', error);
+        setAlert({ open: true, severity: 'error', message: 'Failed to list files.' });
+      }
+    } else {
+      setSelectedFiles((prev) => [...prev, filePath]);
+    }
+  };
+
+  const handleBack = async () => {
+    const pathParts = currentDirectory.split('/');
+    pathParts.pop();
+    const newPath = pathParts.join('/');
+    setCurrentDirectory(newPath);
 
     try {
-      const fileContents = await Promise.all(newValue.map(async (filePath) => {
-        const response = await axios.post('http://localhost:5000/api/read-file', {
-          projectPath: path,
-          filePath,
-        });
-        return `Content of ${filePath}:\n${response.data.content}`;
-      }));
-
-      setInput(fileContents.join('\n\n'));
+      const response = await axios.post('http://localhost:5000/api/list-files', { path: path + (newPath ? `/${newPath}` : '') });
+      setFilesAndDirs(response.data.filesAndDirs);
     } catch (error) {
-      console.error('Error reading file:', error);
-      setAlert({ open: true, severity: 'error', message: 'Failed to read file.' });
+      console.error('Error listing files:', error);
+      setAlert({ open: true, severity: 'error', message: 'Failed to list files.' });
     }
   };
 
@@ -193,50 +208,31 @@ function ChatPage({ onBackToMenu }) {
             </Box>
           )}
         </Box>
-        {files.length > 0 && (
+        {filesAndDirs.length > 0 && (
           <Box sx={{ mb: 2 }}>
-            <Autocomplete
-              multiple
-              options={files}
-              getOptionLabel={(option) => option}
-              value={selectedFiles}
-              onChange={handleFileSelect}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip
-                    variant="outlined"
-                    label={option}
-                    {...getTagProps({ index })}
-                    sx={{ color: 'white', borderColor: 'white' }}
-                  />
-                ))
-              }
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  variant="outlined"
-                  placeholder="Select files"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      color: 'white',
-                      '& fieldset': {
-                        borderColor: 'white',
-                      },
-                      '&:hover fieldset': {
-                        borderColor: 'white',
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderColor: 'white',
-                      },
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: 'white',
-                    },
-                  }}
-                />
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography variant="h6" sx={{ color: 'white' }}>Files</Typography>
+              <IconButton onClick={() => setIsFileSelectionOpen(!isFileSelectionOpen)} sx={{ color: 'white' }}>
+                {isFileSelectionOpen ? <FaChevronUp /> : <FaChevronDown />}
+              </IconButton>
+            </Box>
+            <Collapse in={isFileSelectionOpen}>
+              {currentDirectory && (
+                <Button onClick={handleBack} variant="outlined" sx={{ mb: 1 }}>
+                  Back
+                </Button>
               )}
-              sx={{ backgroundColor: '#2e2e2e', borderRadius: 1, color: 'white' }}
-            />
+              <List>
+                {filesAndDirs.map((item) => (
+                  <ListItem button key={item.name} onClick={() => handleFileSelect(item.name)}>
+                    <ListItemIcon>
+                      {item.isDirectory ? <FaFolder color="yellow" /> : <FaFile color="white" />}
+                    </ListItemIcon>
+                    <ListItemText primary={item.name} sx={{ color: 'white' }} />
+                  </ListItem>
+                ))}
+              </List>
+            </Collapse>
           </Box>
         )}
         <Paper sx={{ p: 2, height: '60vh', overflow: 'auto', backgroundColor: theme.palette.background.default }}>
