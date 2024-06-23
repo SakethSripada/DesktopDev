@@ -8,7 +8,6 @@ import {
   Paper,
   Typography,
   TextField,
-  CircularProgress,
   List,
   ListItem,
   ListItemText,
@@ -21,6 +20,7 @@ import {
   DialogActions,
   Breadcrumbs,
   Link,
+  CircularProgress,
 } from '@mui/material';
 import { FaCopy, FaCheckCircle, FaPlay, FaFolder, FaChevronUp, FaChevronDown, FaFileImport, FaFile } from 'react-icons/fa';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -321,7 +321,7 @@ function ChatPage({ onBackToMenu }) {
 
   return (
     <ThemeProvider theme={theme}>
-      <Container maxWidth="lg">
+      <Container maxWidth="lg" sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ mt: 2, mb: 2 }}>
           <Button variant="contained" color="secondary" onClick={onBackToMenu} sx={{ mb: 2 }}>
             Menu
@@ -334,7 +334,7 @@ function ChatPage({ onBackToMenu }) {
               sx={{ ml: 1, flex: 1, color: 'white' }}
             />
             <Button type="submit" variant="contained" color="primary" onClick={handlePathSubmit}>
-              Submit
+              Connect
             </Button>
           </Paper>
           {isConnected && (
@@ -376,7 +376,7 @@ function ChatPage({ onBackToMenu }) {
             </Collapse>
           </Box>
         )}
-        <Paper sx={{ p: 2, height: '60vh', overflow: 'auto', backgroundColor: theme.palette.background.default }}>
+        <Paper sx={{ p: 2, flexGrow: 1, overflow: 'auto', backgroundColor: theme.palette.background.default }}>
           {messages.map((msg, index) => (
             <Box key={index} sx={{ mb: 2, textAlign: msg.sender === 'user' ? 'right' : 'left' }}>
               <Paper
@@ -456,7 +456,7 @@ function ChatPage({ onBackToMenu }) {
             </Box>
           )}
         </Paper>
-        <Box sx={{ mt: 2, position: 'sticky', bottom: 0, backgroundColor: theme.palette.background.default }}>
+        <Box sx={{ mt: 2, backgroundColor: theme.palette.background.default }}>
           <Paper component="form" onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} sx={{ display: 'flex', alignItems: 'center', p: 1 }}>
             <TextField
               value={input}
@@ -466,7 +466,7 @@ function ChatPage({ onBackToMenu }) {
               variant="outlined"
               fullWidth
               multiline
-              sx={{ mr: 1, '& .MuiOutlinedInput-root': { height: 'auto' } }}
+              sx={{ mr: 1 }}
             />
             <Button type="submit" variant="contained" color="primary">
               Send
