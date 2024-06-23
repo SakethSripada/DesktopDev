@@ -20,6 +20,9 @@ function MainMenu({ onSelectTool }) {
       <Button variant="contained" color="primary" onClick={() => onSelectTool('request')}>
         Requests
       </Button>
+      <Button variant="contained" color="primary" onClick={() => onSelectTool('browser')}>
+        Browser
+      </Button>
     </Box>
   );
 }

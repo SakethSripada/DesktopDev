@@ -4,6 +4,7 @@ import GitPage from './Components/Pages/GitPage';
 import MainMenu from './Components/Pages/MainMenu';
 import ScaffoldingPage from './Components/Pages/ScaffoldingPage';
 import RequestPage from './Components/Pages/RequestPage';
+import Browser from './Components/Pages/Browser';
 import './App.css';
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
       {selectedTool === 'git' && <GitPage onBackToMenu={handleBackToMenu} />}
       {selectedTool === 'scaffolding' && <ScaffoldingPage onBackToMenu={handleBackToMenu} />}
       {selectedTool === 'request' && <RequestPage onBackToMenu={handleBackToMenu} />}
+      {selectedTool === 'browser' && <Browser onBackToMenu={handleBackToMenu} />}
     </div>
   );
 }
