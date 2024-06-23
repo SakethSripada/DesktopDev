@@ -18,7 +18,6 @@ import {
 } from '@mui/material';
 import { FaPlusCircle, FaMinusCircle } from 'react-icons/fa';
 import axios from 'axios';
-import '../styles/RequestPage.css';
 
 const requestMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'];
 
