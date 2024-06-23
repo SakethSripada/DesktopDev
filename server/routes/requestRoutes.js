@@ -3,7 +3,11 @@ const router = express.Router();
 const axios = require('axios');
 
 router.post('/request', async (req, res) => {
-  const { method, url, headers, body } = req.body;
+  let { method, url, headers, body } = req.body;
+
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = `http://${url}`;
+  }
 
   try {
     const validHeaders = headers.reduce((acc, { key, value }) => {

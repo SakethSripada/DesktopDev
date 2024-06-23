@@ -48,21 +48,27 @@ const RequestPage = ({ onBackToMenu }) => {
   };
 
   const handleSubmit = async () => {
+    let formattedUrl = url;
+    if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
+      formattedUrl = `http://${formattedUrl}`;
+    }
+  
     const validHeaders = headers.filter(header => header.key.trim() !== '' && header.value.trim() !== '');
-
+  
     try {
       const res = await axios.post('http://localhost:5000/request', {
         method,
-        url,
+        url: formattedUrl,
         headers: validHeaders,
         body: (method === 'POST' || method === 'PUT' || method === 'PATCH') ? body : undefined
       });
-
+  
       setResponse(res.data);
     } catch (error) {
       setResponse({ error: error.response ? error.response.data : error.message });
     }
   };
+  
 
   return (
     <Box className="request-container">
