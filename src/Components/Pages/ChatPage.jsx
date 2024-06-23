@@ -160,7 +160,26 @@ function ChatPage({ onBackToMenu }) {
         setAlert({ open: true, severity: 'error', message: 'Failed to list files.' });
       }
     } else {
-      setSelectedFiles((prev) => [...prev, filePath]);
+      if (selectedFiles.includes(filePath)) {
+        setSelectedFiles((prev) => prev.filter((file) => file !== filePath));
+        setInput((prev) => {
+          const regex = new RegExp(`Content of ${filePath}:\\n[\\s\\S]*?(\\n\\n|$)`, 'g');
+          return prev.replace(regex, '').trim();
+        });
+      } else {
+        try {
+          const response = await axios.post('http://localhost:5000/api/read-file', {
+            projectPath: path,
+            filePath: currentDirectory ? `${currentDirectory}/${filePath}` : filePath,
+          });
+          const fileContent = `Content of ${filePath}:\n${response.data.content}`;
+          setInput((prev) => (prev ? `${prev}\n\n${fileContent}` : fileContent));
+          setSelectedFiles((prev) => [...prev, filePath]);
+        } catch (error) {
+          console.error('Error reading file:', error);
+          setAlert({ open: true, severity: 'error', message: 'Failed to read file.' });
+        }
+      }
     }
   };
 
@@ -224,7 +243,12 @@ function ChatPage({ onBackToMenu }) {
               )}
               <List>
                 {filesAndDirs.map((item) => (
-                  <ListItem button key={item.name} onClick={() => handleFileSelect(item.name)}>
+                  <ListItem 
+                    button 
+                    key={item.name} 
+                    onClick={() => handleFileSelect(item.name)} 
+                    sx={{ backgroundColor: selectedFiles.includes(item.name) ? 'rgba(160, 36, 180, 0.3)' : 'inherit' }}
+                  >
                     <ListItemIcon>
                       {item.isDirectory ? <FaFolder color="yellow" /> : <FaFile color="white" />}
                     </ListItemIcon>
