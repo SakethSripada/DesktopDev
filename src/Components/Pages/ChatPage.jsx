@@ -11,8 +11,15 @@ import {
   CircularProgress,
   Autocomplete,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Select,
+  MenuItem,
 } from '@mui/material';
-import { FaCopy, FaCheckCircle } from 'react-icons/fa';
+import { FaCopy, FaCheckCircle, FaPlay } from 'react-icons/fa';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
@@ -44,6 +51,9 @@ function ChatPage({ onBackToMenu }) {
   const [files, setFiles] = useState([]);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [commandToExecute, setCommandToExecute] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [subDirectory, setSubDirectory] = useState('');
 
   const handleInputChange = (e) => {
     setInput(e.target.value);
@@ -100,6 +110,25 @@ function ChatPage({ onBackToMenu }) {
       console.error('Failed to copy: ', err);
       setAlert({ open: true, severity: 'error', message: 'Failed to copy to clipboard.' });
     });
+  };
+
+  const handleExecute = (command) => {
+    setCommandToExecute(command);
+    setIsModalOpen(true);
+  };
+
+  const handleExecuteConfirm = async () => {
+    setIsModalOpen(false);
+    try {
+      const response = await axios.post('http://localhost:5000/api/execute-command', {
+        path: subDirectory ? path + '/' + subDirectory : path,
+        command: commandToExecute,
+      });
+      setAlert({ open: true, severity: 'success', message: `Command executed: ${response.data.output}` });
+    } catch (error) {
+      console.error('Error executing command:', error);
+      setAlert({ open: true, severity: 'error', message: 'Failed to execute command.' });
+    }
   };
 
   const handlePathSubmit = async (e) => {
@@ -240,7 +269,7 @@ function ChatPage({ onBackToMenu }) {
                           sx={{
                             position: 'absolute',
                             top: 8,
-                            right: 8,
+                            right: 36, 
                             backgroundColor: '#3e3e3e',
                             '&:hover': {
                               backgroundColor: '#4e4e4e',
@@ -248,6 +277,21 @@ function ChatPage({ onBackToMenu }) {
                           }}
                         >
                           <FaCopy style={{ color: '#007bff' }} />
+                        </IconButton>
+                        <IconButton
+                          onClick={() => handleExecute(part)}
+                          size="small"
+                          sx={{
+                            position: 'absolute',
+                            top: 8,
+                            right: 8,
+                            backgroundColor: '#3e3e3e',
+                            '&:hover': {
+                              backgroundColor: '#4e4e4e',
+                            },
+                          }}
+                        >
+                          <FaPlay style={{ color: '#007bff' }} />
                         </IconButton>
                       </Box>
                     );
@@ -285,6 +329,37 @@ function ChatPage({ onBackToMenu }) {
           </Paper>
         </Box>
         <Alert open={alert.open} onClose={handleCloseAlert} severity={alert.severity} message={alert.message} />
+
+        <Dialog open={isModalOpen} onClose={() => setIsModalOpen(false)}>
+          <DialogTitle>Execute Command</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              You are about to execute the following command:
+            </DialogContentText>
+            <Paper sx={{ p: 2, mt: 1, mb: 2 }}>
+              <Typography>{commandToExecute}</Typography>
+            </Paper>
+            <TextField
+              label="Sub-directory (optional)"
+              variant="outlined"
+              fullWidth
+              value={subDirectory}
+              onChange={(e) => setSubDirectory(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+            <DialogContentText>
+              Confirm the execution of this command in the specified directory.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setIsModalOpen(false)} color="secondary">
+              Cancel
+            </Button>
+            <Button onClick={handleExecuteConfirm} color="primary">
+              Execute
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Container>
     </ThemeProvider>
   );

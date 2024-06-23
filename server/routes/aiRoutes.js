@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { exec } = require('child_process');
 const axios = require('axios');
 const router = express.Router();
 
@@ -73,6 +74,31 @@ router.post('/read-file', (req, res) => {
     }
 
     res.json({ content: data });
+  });
+});
+
+router.post('/execute-command', (req, res) => {
+  const { path: projectPath, command } = req.body;
+
+  if (!projectPath || typeof projectPath !== 'string') {
+    console.error('Invalid project path:', projectPath);
+    return res.status(400).json({ error: 'Valid project path is required' });
+  }
+
+  if (!command || typeof command !== 'string') {
+    console.error('Invalid command:', command);
+    return res.status(400).json({ error: 'Valid command is required' });
+  }
+
+  const cleanedCommand = command.replace(/```/g, '').trim();
+
+  exec(cleanedCommand, { cwd: projectPath }, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Error executing command: ${stderr}`);
+      return res.status(500).json({ error: stderr });
+    }
+
+    res.json({ output: stdout });
   });
 });
 
