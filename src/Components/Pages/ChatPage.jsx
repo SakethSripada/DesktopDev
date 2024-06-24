@@ -63,6 +63,9 @@ function ChatPage({ onBackToMenu }) {
   const [isFileSelectionOpen, setIsFileSelectionOpen] = useState(true);
   const [fileInsertPath, setFileInsertPath] = useState('');
   const [directoryTree, setDirectoryTree] = useState([]);
+  const [conversationHistory, setConversationHistory] = useState([
+    { role: 'system', content: 'You are a helpful assistant.' }
+  ]);
 
   useEffect(() => {
     if (isConnected) {
@@ -93,13 +96,19 @@ function ChatPage({ onBackToMenu }) {
       setInput('');
       setIsTyping(true);
 
+      const updatedConversationHistory = [
+        ...conversationHistory,
+        { role: 'user', content: input }
+      ];
+
       try {
+        const validConversationHistory = updatedConversationHistory.filter(msg => msg.content && msg.content.trim());
         const response = await fetch('http://localhost:5000/api/generate', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ prompt: input }),
+          body: JSON.stringify({ conversationHistory: validConversationHistory }), 
         });
 
         if (!response.ok) {
@@ -109,6 +118,8 @@ function ChatPage({ onBackToMenu }) {
         const data = await response.json();
         const botMessage = { text: data.response.trim(), sender: 'bot' };
         setMessages((prevMessages) => [...prevMessages, botMessage]);
+
+        setConversationHistory((prevHistory) => [...prevHistory, { role: 'assistant', content: data.response.trim() }]);
       } catch (error) {
         console.error('Error fetching response:', error);
         const botMessage = { text: 'Error generating response. Please try again.', sender: 'bot' };
