@@ -6,17 +6,18 @@ const axios = require('axios');
 const router = express.Router();
 
 router.post('/generate', async (req, res) => {
-  const prompt = req.body.prompt;
+  const conversationHistory = req.body.conversationHistory;
+
+  if (!conversationHistory || !Array.isArray(conversationHistory) || conversationHistory.length === 0) {
+    return res.status(400).json({ error: "Invalid conversation history. Expected a non-empty array." });
+  }
 
   try {
     const response = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
         model: 'gpt-3.5-turbo',
-        messages: [
-          { role: 'system', content: 'You are a helpful assistant.' },
-          { role: 'user', content: prompt }
-        ],
+        messages: conversationHistory,
         max_tokens: 300,
       },
       {
