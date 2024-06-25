@@ -22,7 +22,7 @@ import {
   Link,
   CircularProgress,
 } from '@mui/material';
-import { FaCopy, FaCheckCircle, FaPlay, FaFolder, FaChevronUp, FaChevronDown, FaFileImport, FaFile } from 'react-icons/fa';
+import { FaCopy, FaCheckCircle, FaPlay, FaFolder, FaChevronUp, FaChevronDown, FaFileImport, FaFile, FaRedo } from 'react-icons/fa';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
@@ -101,14 +101,15 @@ function ChatPage({ onBackToMenu }) {
         { role: 'user', content: input }
       ];
 
+      const validConversationHistory = updatedConversationHistory.slice(-5).filter(msg => msg.content && msg.content.trim());
+
       try {
-        const validConversationHistory = updatedConversationHistory.filter(msg => msg.content && msg.content.trim());
         const response = await fetch('http://localhost:5000/api/generate', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ conversationHistory: validConversationHistory }), 
+          body: JSON.stringify({ conversationHistory: validConversationHistory }),
         });
 
         if (!response.ok) {
@@ -116,7 +117,7 @@ function ChatPage({ onBackToMenu }) {
         }
 
         const data = await response.json();
-        const botMessage = { text: data.response.trim(), sender: 'bot' };
+        const botMessage = { text: data.response.trim(), sender: 'bot', id: data.id, isContinued: data.isContinued };
         setMessages((prevMessages) => [...prevMessages, botMessage]);
 
         setConversationHistory((prevHistory) => [...prevHistory, { role: 'assistant', content: data.response.trim() }]);
@@ -330,6 +331,169 @@ function ChatPage({ onBackToMenu }) {
     </List>
   );
 
+  const handleContinueGeneration = async (messageId) => {
+    setIsTyping(true);
+    const lastMessages = conversationHistory.slice(-5);
+    try {
+      const response = await fetch('http://localhost:5000/api/continue-generation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ conversationHistory: lastMessages }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const data = await response.json();
+      const lastMessageIndex = messages.findIndex(msg => msg.id === messageId);
+      const lastMessage = messages[lastMessageIndex];
+      const updatedText = lastMessage.text + data.response.trim();
+
+      const updatedMessages = [...messages];
+      updatedMessages[lastMessageIndex] = {
+        ...lastMessage,
+        text: formatCodeBlocks(updatedText),
+        isContinued: data.isContinued,
+      };
+
+      setMessages(updatedMessages);
+
+      setConversationHistory((prevHistory) => [...prevHistory, { role: 'assistant', content: data.response.trim() }]);
+    } catch (error) {
+      console.error('Error continuing generation:', error);
+      const botMessage = { text: 'Error generating response. Please try again.', sender: 'bot' };
+      setMessages((prevMessages) => [...prevMessages, botMessage]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const formatCodeBlocks = (text) => {
+    const parts = text.split(/(```[\s\S]*?\n[\s\S]*?```|```[\s\S]*?$)/g);
+    let formattedText = '';
+    parts.forEach(part => {
+      const codeBlockMatch = part.match(/```(\w*)\n([\s\S]+)```/);
+      if (codeBlockMatch) {
+        const language = codeBlockMatch[1] || 'plaintext';
+        const codeContent = codeBlockMatch[2].trim();
+        formattedText += `\`\`\`${language}\n${codeContent}\n\`\`\`\n`;
+      } else {
+        formattedText += part;
+      }
+    });
+    return formattedText.trim();
+  };
+
+  const formatCodeBlock = (part, language = 'plaintext', index) => {
+    return (
+      <Box key={index} sx={{ position: 'relative' }}>
+        <SyntaxHighlighter language={language} style={oneDark}>
+          {part}
+        </SyntaxHighlighter>
+        <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 2 }}>
+          <IconButton
+            onClick={() => handleCopy(part)}
+            size="small"
+            sx={{
+              backgroundColor: '#3e3e3e',
+              '&:hover': {
+                backgroundColor: '#4e4e4e',
+              },
+            }}
+          >
+            <FaCopy style={{ color: '#007bff' }} />
+          </IconButton>
+          <IconButton
+            onClick={() => handleExecute(part)}
+            size="small"
+            sx={{
+              backgroundColor: '#3e3e3e',
+              '&:hover': {
+                backgroundColor: '#4e4e4e',
+              },
+            }}
+          >
+            <FaPlay style={{ color: '#007bff' }} />
+          </IconButton>
+          <IconButton
+            onClick={() => handleInsert(part)}
+            size="small"
+            sx={{
+              backgroundColor: '#3e3e3e',
+              '&:hover': {
+                backgroundColor: '#4e4e4e',
+              },
+            }}
+          >
+            <FaFileImport style={{ color: '#007bff' }} />
+          </IconButton>
+        </Box>
+      </Box>
+    );
+  };
+
+  const renderMessages = () => {
+    return messages.map((msg, index) => {
+      const parts = msg.text.split(/(```[\s\S]*?\n[\s\S]*?```|```[\s\S]*?$)/g);
+      let insideCodeBlock = false;
+
+      return (
+        <Box key={index} sx={{ mb: 2, textAlign: msg.sender === 'user' ? 'right' : 'left' }}>
+          <Paper
+            sx={{
+              py: 1,
+              px: 2,
+              display: 'inline-block',
+              backgroundColor: msg.sender === 'user' ? '#4e4e4e' : '#3e3e3e',
+              position: 'relative',
+              maxWidth: '75%',
+              wordBreak: 'break-word',
+            }}
+          >
+            {parts.map((part, i) => {
+              const codeBlockMatch = part.match(/```(\w*)\n([\s\S]+)```/);
+              if (codeBlockMatch) {
+                const language = codeBlockMatch[1] || 'plaintext';
+                const codeContent = codeBlockMatch[2].trim();
+                insideCodeBlock = false;
+                return formatCodeBlock(codeContent, language, i);
+              } else if (part.startsWith('```')) {
+                const language = part.match(/```(\w*)/)[1] || 'plaintext';
+                const codeContent = part.slice(part.indexOf('\n') + 1).trim();
+                insideCodeBlock = true;
+                return formatCodeBlock(codeContent, language, i);
+              } else {
+                if (insideCodeBlock) {
+                  return (
+                    <Box key={i} sx={{ position: 'relative' }}>
+                      <SyntaxHighlighter language="plaintext" style={oneDark}>
+                        {part}
+                      </SyntaxHighlighter>
+                    </Box>
+                  );
+                } else {
+                  return <Typography key={i} sx={{ color: '#fff' }}>{part}</Typography>;
+                }
+              }
+            })}
+            {msg.isContinued && (
+              <Button
+                onClick={() => handleContinueGeneration(msg.id)}
+                startIcon={<FaRedo />}
+                sx={{ mt: 1, color: '#007bff' }}
+              >
+                Continue generation
+              </Button>
+            )}
+          </Paper>
+        </Box>
+      );
+    });
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <Container maxWidth="lg" sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -388,76 +552,7 @@ function ChatPage({ onBackToMenu }) {
           </Box>
         )}
         <Paper sx={{ p: 2, flexGrow: 1, overflow: 'auto', backgroundColor: theme.palette.background.default }}>
-          {messages.map((msg, index) => (
-            <Box key={index} sx={{ mb: 2, textAlign: msg.sender === 'user' ? 'right' : 'left' }}>
-              <Paper
-                sx={{
-                  py: 1,
-                  px: 2,
-                  display: 'inline-block',
-                  backgroundColor: msg.sender === 'user' ? '#4e4e4e' : '#3e3e3e',
-                  position: 'relative',
-                  maxWidth: '75%',
-                  wordBreak: 'break-word',
-                }}
-              >
-                {msg.text.split(/(```[\s\S]+?```)/g).map((part, index) => {
-                  const codeBlockMatch = part.match(/```(\w*)\n([\s\S]+)```/);
-                  if (codeBlockMatch) {
-                    const language = codeBlockMatch[1] || 'plaintext';
-                    const codeContent = codeBlockMatch[2].trim();
-                    return (
-                      <Box key={index} sx={{ position: 'relative' }}>
-                        <SyntaxHighlighter language={language} style={oneDark}>
-                          {codeContent}
-                        </SyntaxHighlighter>
-                        <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 2 }}>
-                          <IconButton
-                            onClick={() => handleCopy(part)}
-                            size="small"
-                            sx={{
-                              backgroundColor: '#3e3e3e',
-                              '&:hover': {
-                                backgroundColor: '#4e4e4e',
-                              },
-                            }}
-                          >
-                            <FaCopy style={{ color: '#007bff' }} />
-                          </IconButton>
-                          <IconButton
-                            onClick={() => handleExecute(part)}
-                            size="small"
-                            sx={{
-                              backgroundColor: '#3e3e3e',
-                              '&:hover': {
-                                backgroundColor: '#4e4e4e',
-                              },
-                            }}
-                          >
-                            <FaPlay style={{ color: '#007bff' }} />
-                          </IconButton>
-                          <IconButton
-                            onClick={() => handleInsert(part)}
-                            size="small"
-                            sx={{
-                              backgroundColor: '#3e3e3e',
-                              '&:hover': {
-                                backgroundColor: '#4e4e4e',
-                              },
-                            }}
-                          >
-                            <FaFileImport style={{ color: '#007bff' }} />
-                          </IconButton>
-                        </Box>
-                      </Box>
-                    );
-                  } else {
-                    return <Typography key={index} sx={{ color: '#fff' }}>{part}</Typography>;
-                  }
-                })}
-              </Paper>
-            </Box>
-          ))}
+          {renderMessages()}
           {isTyping && (
             <Box sx={{ textAlign: 'left', display: 'flex', alignItems: 'center', mt: 1 }}>
               <CircularProgress size={20} sx={{ mr: 1 }} />
