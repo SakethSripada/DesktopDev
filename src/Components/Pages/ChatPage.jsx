@@ -177,6 +177,15 @@ function ChatPage({ onBackToMenu }) {
     }
   };
 
+  const handleDisconnect = () => {
+    setIsConnected(false);
+    setFilesAndDirs([]);
+    setSelectedFiles([]);
+    setPath('');
+    setCurrentDirectory('');
+    setFileInsertPath('');
+  };
+
   const handleFileSelect = async (filePath) => {
     if (filesAndDirs.find((item) => item.name === filePath && item.isDirectory)) {
       setCurrentDirectory((prev) => (prev ? `${prev}/${filePath}` : filePath));
@@ -355,7 +364,7 @@ function ChatPage({ onBackToMenu }) {
       const updatedMessages = [...messages];
       updatedMessages[lastMessageIndex] = {
         ...lastMessage,
-        text: formatCodeBlocks(updatedText),
+        text: updatedText,
         isContinued: data.isContinued,
       };
 
@@ -369,70 +378,6 @@ function ChatPage({ onBackToMenu }) {
     } finally {
       setIsTyping(false);
     }
-  };
-
-  const formatCodeBlocks = (text) => {
-    const parts = text.split(/(```[\s\S]*?\n[\s\S]*?```|```[\s\S]*?$)/g);
-    let formattedText = '';
-    parts.forEach(part => {
-      const codeBlockMatch = part.match(/```(\w*)\n([\s\S]+)```/);
-      if (codeBlockMatch) {
-        const language = codeBlockMatch[1] || 'plaintext';
-        const codeContent = codeBlockMatch[2].trim();
-        formattedText += `\`\`\`${language}\n${codeContent}\n\`\`\`\n`;
-      } else {
-        formattedText += part;
-      }
-    });
-    return formattedText.trim();
-  };
-
-  const formatCodeBlock = (part, language = 'plaintext', index) => {
-    return (
-      <Box key={index} sx={{ position: 'relative' }}>
-        <SyntaxHighlighter language={language} style={oneDark}>
-          {part}
-        </SyntaxHighlighter>
-        <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 2 }}>
-          <IconButton
-            onClick={() => handleCopy(part)}
-            size="small"
-            sx={{
-              backgroundColor: '#3e3e3e',
-              '&:hover': {
-                backgroundColor: '#4e4e4e',
-              },
-            }}
-          >
-            <FaCopy style={{ color: '#007bff' }} />
-          </IconButton>
-          <IconButton
-            onClick={() => handleExecute(part)}
-            size="small"
-            sx={{
-              backgroundColor: '#3e3e3e',
-              '&:hover': {
-                backgroundColor: '#4e4e4e',
-              },
-            }}
-          >
-            <FaPlay style={{ color: '#007bff' }} />
-          </IconButton>
-          <IconButton
-            onClick={() => handleInsert(part)}
-            size="small"
-            sx={{
-              backgroundColor: '#3e3e3e',
-              '&:hover': {
-                backgroundColor: '#4e4e4e',
-              },
-            }}
-          >
-            <FaFileImport style={{ color: '#007bff' }} />
-          </IconButton>
-        </Box>
-      </Box>
-    );
   };
 
   const renderMessages = () => {
@@ -459,12 +404,62 @@ function ChatPage({ onBackToMenu }) {
                 const language = codeBlockMatch[1] || 'plaintext';
                 const codeContent = codeBlockMatch[2].trim();
                 insideCodeBlock = false;
-                return formatCodeBlock(codeContent, language, i);
+                return (
+                  <Box key={i} sx={{ position: 'relative' }}>
+                    <SyntaxHighlighter language={language} style={oneDark}>
+                      {codeContent}
+                    </SyntaxHighlighter>
+                    <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 2 }}>
+                      <IconButton
+                        onClick={() => handleCopy(codeContent)}
+                        size="small"
+                        sx={{
+                          backgroundColor: '#3e3e3e',
+                          '&:hover': {
+                            backgroundColor: '#4e4e4e',
+                          },
+                        }}
+                      >
+                        <FaCopy style={{ color: '#007bff' }} />
+                      </IconButton>
+                      <IconButton
+                        onClick={() => handleExecute(codeContent)}
+                        size="small"
+                        sx={{
+                          backgroundColor: '#3e3e3e',
+                          '&:hover': {
+                            backgroundColor: '#4e4e4e',
+                          },
+                        }}
+                      >
+                        <FaPlay style={{ color: '#007bff' }} />
+                      </IconButton>
+                      <IconButton
+                        onClick={() => handleInsert(codeContent)}
+                        size="small"
+                        sx={{
+                          backgroundColor: '#3e3e3e',
+                          '&:hover': {
+                            backgroundColor: '#4e4e4e',
+                          },
+                        }}
+                      >
+                        <FaFileImport style={{ color: '#007bff' }} />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                );
               } else if (part.startsWith('```')) {
                 const language = part.match(/```(\w*)/)[1] || 'plaintext';
                 const codeContent = part.slice(part.indexOf('\n') + 1).trim();
                 insideCodeBlock = true;
-                return formatCodeBlock(codeContent, language, i);
+                return (
+                  <Box key={i} sx={{ position: 'relative' }}>
+                    <SyntaxHighlighter language={language} style={oneDark}>
+                      {codeContent}
+                    </SyntaxHighlighter>
+                  </Box>
+                );
               } else {
                 if (insideCodeBlock) {
                   return (
@@ -508,9 +503,15 @@ function ChatPage({ onBackToMenu }) {
               placeholder="Enter directory path"
               sx={{ ml: 1, flex: 1, color: 'white' }}
             />
-            <Button type="submit" variant="contained" color="primary" onClick={handlePathSubmit}>
-              Connect
-            </Button>
+            {!isConnected ? (
+              <Button type="submit" variant="contained" color="primary" onClick={handlePathSubmit}>
+                Connect
+              </Button>
+            ) : (
+              <Button type="button" variant="contained" color="secondary" onClick={handleDisconnect}>
+                Disconnect
+              </Button>
+            )}
           </Paper>
           {isConnected && (
             <Box sx={{ display: 'flex', alignItems: 'center', color: 'green', mb: 2 }}>
