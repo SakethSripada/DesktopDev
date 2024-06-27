@@ -82,6 +82,11 @@ function ChatPage({ onBackToMenu }) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    } else if (e.key === 'ArrowUp') {
+      const lastUserMessage = messages.slice().reverse().find((msg) => msg.sender === 'user');
+      if (lastUserMessage) {
+        setInput(lastUserMessage.text);
+      }
     }
   };
 
