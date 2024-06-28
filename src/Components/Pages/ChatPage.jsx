@@ -202,6 +202,10 @@ function ChatPage({ onBackToMenu }) {
 
   const handlePathSubmit = async (e) => {
     e.preventDefault();
+    if (!path.trim()) {
+      setAlert({ open: true, severity: 'error', message: 'Please enter a directory path.' });
+      return;
+    }
     try {
       const response = await axios.post('http://localhost:5000/api/list-files', { path });
       setFilesAndDirs(response.data.filesAndDirs);
