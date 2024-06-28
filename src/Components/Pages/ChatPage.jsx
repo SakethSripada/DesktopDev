@@ -21,8 +21,6 @@ import {
   Breadcrumbs,
   Link,
   CircularProgress,
-  Tab,
-  Tabs,
 } from '@mui/material';
 import {
   FaCopy,
@@ -356,14 +354,30 @@ function ChatPage({ onBackToMenu }) {
             }}
           >
             <ListItemIcon>
-              <FaFolder color="yellow" />
+              {getFileIcon(item.name)}
             </ListItemIcon>
-            <ListItemText primary={item.name} />
+            <ListItemText primary={item.name} sx={{ color: 'white' }} />
           </ListItem>
         </React.Fragment>
       ))}
     </List>
   );
+
+  const getFileIcon = (fileName) => {
+    const fileExtension = fileName.split('.').pop();
+    switch (fileExtension) {
+      case 'js':
+        return <FaJsSquare color="yellow" />;
+      case 'py':
+        return <FaPython color="blue" />;
+      case 'html':
+        return <FaHtml5 color="orange" />;
+      case 'css':
+        return <FaCss3Alt color="blue" />;
+      default:
+        return <FaFile color="white" />;
+    }
+  };
 
   const handleContinueGeneration = async (messageId) => {
     setIsTyping(true);
@@ -555,7 +569,7 @@ function ChatPage({ onBackToMenu }) {
             }}
           >
             <IconComponent style={{ marginRight: 8 }} />
-            <Typography sx={{ flexGrow: 1 }}>{file.name}</Typography>
+            <Typography sx={{ flexGrow: 1, mr: 1 }}>{file.name}</Typography>
             <IconButton
               size="small"
               onClick={() => handleRemoveFile(file.name)}
@@ -597,13 +611,13 @@ function ChatPage({ onBackToMenu }) {
                 Disconnect
               </Button>
             )}
+            {isConnected && (
+              <Box sx={{ display: 'flex', alignItems: 'center', color: 'green', ml: 2 }}>
+                <FaCheckCircle style={{ marginRight: '8px' }} />
+                <Typography sx={{ mr: 2 }}>Connected</Typography>
+              </Box>
+            )}
           </Paper>
-          {isConnected && (
-            <Box sx={{ display: 'flex', alignItems: 'center', color: 'green', mb: 2 }}>
-              <FaCheckCircle style={{ marginRight: '8px' }} />
-              <Typography>Connected</Typography>
-            </Box>
-          )}
         </Box>
         {filesAndDirs.length > 0 && (
           <Box sx={{ mb: 2 }}>
@@ -628,7 +642,7 @@ function ChatPage({ onBackToMenu }) {
                     sx={{ backgroundColor: selectedFiles.some(file => file.name === item.name) ? 'rgba(160, 36, 180, 0.3)' : 'inherit' }}
                   >
                     <ListItemIcon>
-                      {item.isDirectory ? <FaFolder color="yellow" /> : <FaFile color="white" />}
+                      {getFileIcon(item.name)}
                     </ListItemIcon>
                     <ListItemText primary={item.name} sx={{ color: 'white' }} />
                   </ListItem>
