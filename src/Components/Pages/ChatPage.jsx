@@ -21,8 +21,25 @@ import {
   Breadcrumbs,
   Link,
   CircularProgress,
+  Tab,
+  Tabs,
 } from '@mui/material';
-import { FaCopy, FaCheckCircle, FaPlay, FaFolder, FaChevronUp, FaChevronDown, FaFileImport, FaFile, FaRedo } from 'react-icons/fa';
+import {
+  FaCopy,
+  FaCheckCircle,
+  FaPlay,
+  FaFolder,
+  FaChevronUp,
+  FaChevronDown,
+  FaFileImport,
+  FaFile,
+  FaRedo,
+  FaTimes,
+  FaJsSquare,
+  FaPython,
+  FaHtml5,
+  FaCss3Alt,
+} from 'react-icons/fa';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
@@ -103,7 +120,11 @@ function ChatPage({ onBackToMenu }) {
 
       const updatedConversationHistory = [
         ...conversationHistory,
-        { role: 'user', content: input }
+        { role: 'user', content: input },
+        ...selectedFiles.map((file) => ({
+          role: 'system',
+          content: `Content of ${file.name}:\n${file.content}`,
+        })),
       ];
 
       const validConversationHistory = updatedConversationHistory.slice(-5).filter(msg => msg.content && msg.content.trim());
@@ -203,27 +224,26 @@ function ChatPage({ onBackToMenu }) {
         setAlert({ open: true, severity: 'error', message: 'Failed to list files.' });
       }
     } else {
-      if (selectedFiles.includes(filePath)) {
-        setSelectedFiles((prev) => prev.filter((file) => file !== filePath));
-        setInput((prev) => {
-          const regex = new RegExp(`Content of ${filePath}:\\n[\\s\\S]*?(\\n\\n|$)`, 'g');
-          return prev.replace(regex, '').trim();
-        });
+      if (selectedFiles.find((file) => file.name === filePath)) {
+        setSelectedFiles((prev) => prev.filter((file) => file.name !== filePath));
       } else {
         try {
           const response = await axios.post('http://localhost:5000/api/read-file', {
             projectPath: path,
             filePath: currentDirectory ? `${currentDirectory}/${filePath}` : filePath,
           });
-          const fileContent = `Content of ${filePath}:\n${response.data.content}`;
-          setInput((prev) => (prev ? `${prev}\n\n${fileContent}` : fileContent));
-          setSelectedFiles((prev) => [...prev, filePath]);
+          const fileContent = response.data.content;
+          setSelectedFiles((prev) => [...prev, { name: filePath, content: fileContent }]);
         } catch (error) {
           console.error('Error reading file:', error);
           setAlert({ open: true, severity: 'error', message: 'Failed to read file.' });
         }
       }
     }
+  };
+
+  const handleRemoveFile = (fileName) => {
+    setSelectedFiles((prev) => prev.filter((file) => file.name !== fileName));
   };
 
   const handleBack = async () => {
@@ -494,6 +514,66 @@ function ChatPage({ onBackToMenu }) {
     });
   };
 
+  const renderSelectedFilesTabs = () => (
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', mb: 2 }}>
+      {selectedFiles.map((file) => {
+        const fileExtension = file.name.split('.').pop();
+        let IconComponent;
+
+        switch (fileExtension) {
+          case 'js':
+            IconComponent = FaJsSquare;
+            break;
+          case 'py':
+            IconComponent = FaPython;
+            break;
+          case 'html':
+            IconComponent = FaHtml5;
+            break;
+          case 'css':
+            IconComponent = FaCss3Alt;
+            break;
+          default:
+            IconComponent = FaFile;
+        }
+
+        return (
+          <Paper
+            key={file.name}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              p: 1,
+              mr: 1,
+              mb: 1,
+              backgroundColor: '#4e4e4e',
+              color: 'white',
+              borderRadius: 2,
+              '&:hover': {
+                backgroundColor: '#3e3e3e',
+              },
+            }}
+          >
+            <IconComponent style={{ marginRight: 8 }} />
+            <Typography sx={{ flexGrow: 1 }}>{file.name}</Typography>
+            <IconButton
+              size="small"
+              onClick={() => handleRemoveFile(file.name)}
+              sx={{
+                backgroundColor: '#3e3e3e',
+                '&:hover': {
+                  backgroundColor: '#4e4e4e',
+                },
+              }}
+            >
+              <FaTimes style={{ color: '#007bff' }} />
+            </IconButton>
+          </Paper>
+        );
+      })}
+    </Box>
+  );
+
   return (
     <ThemeProvider theme={theme}>
       <Container maxWidth="lg" sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -545,7 +625,7 @@ function ChatPage({ onBackToMenu }) {
                     button
                     key={item.name}
                     onClick={() => handleFileSelect(item.name)}
-                    sx={{ backgroundColor: selectedFiles.includes(item.name) ? 'rgba(160, 36, 180, 0.3)' : 'inherit' }}
+                    sx={{ backgroundColor: selectedFiles.some(file => file.name === item.name) ? 'rgba(160, 36, 180, 0.3)' : 'inherit' }}
                   >
                     <ListItemIcon>
                       {item.isDirectory ? <FaFolder color="yellow" /> : <FaFile color="white" />}
@@ -569,6 +649,7 @@ function ChatPage({ onBackToMenu }) {
           )}
         </Paper>
         <Box sx={{ mt: 2, backgroundColor: theme.palette.background.default, pb: 2 }}>
+          {renderSelectedFilesTabs()}
           <Paper component="form" onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} sx={{ display: 'flex', alignItems: 'center', p: 1 }}>
             <TextField
               value={input}
