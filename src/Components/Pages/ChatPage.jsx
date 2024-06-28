@@ -21,6 +21,7 @@ import {
   Breadcrumbs,
   Link,
   CircularProgress,
+  Fade,
 } from '@mui/material';
 import {
   FaCopy,
@@ -81,6 +82,7 @@ function ChatPage({ onBackToMenu }) {
   const [conversationHistory, setConversationHistory] = useState([
     { role: 'system', content: 'You are a helpful assistant.' }
   ]);
+  const [transitioning, setTransitioning] = useState(false);
 
   useEffect(() => {
     if (isConnected) {
@@ -211,6 +213,7 @@ function ChatPage({ onBackToMenu }) {
   };
 
   const handleFileSelect = async (filePath) => {
+    setTransitioning(true);
     if (filesAndDirs.find((item) => item.name === filePath && item.isDirectory)) {
       setCurrentDirectory((prev) => (prev ? `${prev}/${filePath}` : filePath));
       const newPath = path + '/' + (currentDirectory ? `${currentDirectory}/${filePath}` : filePath);
@@ -238,6 +241,7 @@ function ChatPage({ onBackToMenu }) {
         }
       }
     }
+    setTransitioning(false);
   };
 
   const handleRemoveFile = (fileName) => {
@@ -249,6 +253,7 @@ function ChatPage({ onBackToMenu }) {
     pathParts.pop();
     const newPath = pathParts.join('/');
     setCurrentDirectory(newPath);
+    setTransitioning(true);
 
     try {
       const response = await axios.post('http://localhost:5000/api/list-files', { path: path + (newPath ? `/${newPath}` : '') });
@@ -257,6 +262,8 @@ function ChatPage({ onBackToMenu }) {
       console.error('Error listing files:', error);
       setAlert({ open: true, severity: 'error', message: 'Failed to list files.' });
     }
+
+    setTransitioning(false);
   };
 
   const handleCloseAlert = () => {
@@ -334,33 +341,30 @@ function ChatPage({ onBackToMenu }) {
   };
 
   const renderDirectoryTree = (tree, basePath) => (
-    <List>
-      {tree.map((item) => (
-        <React.Fragment key={item.name}>
-          <ListItem
-            button
-            onClick={() => {
-              const newInsertPath = basePath + '/' + item.name;
-              setFileInsertPath(newInsertPath);
-              setCurrentDirectory(newInsertPath.replace(path + '/', ''));
-              fetchDirectoryTree(newInsertPath);
-            }}
-            sx={{
-              pl: basePath === path ? 2 : 4,
-              backgroundColor: fileInsertPath === basePath + '/' + item.name ? 'rgba(160, 36, 180, 0.3)' : 'inherit',
-              '&:hover': {
-                backgroundColor: fileInsertPath === basePath + '/' + item.name ? 'rgba(160, 36, 180, 0.3)' : 'rgba(160, 36, 180, 0.1)',
-              },
-            }}
-          >
-            <ListItemIcon>
-              {getFileIcon(item.name)}
-            </ListItemIcon>
-            <ListItemText primary={item.name} sx={{ color: 'white' }} />
-          </ListItem>
-        </React.Fragment>
-      ))}
-    </List>
+    <Fade in={!transitioning}>
+      <List>
+        {tree.map((item) => (
+          <React.Fragment key={item.name}>
+            <ListItem
+              button
+              onClick={() => handleFileSelect(item.name)}
+              sx={{
+                pl: basePath === path ? 2 : 4,
+                backgroundColor: fileInsertPath === basePath + '/' + item.name ? 'rgba(160, 36, 180, 0.3)' : 'inherit',
+                '&:hover': {
+                  backgroundColor: fileInsertPath === basePath + '/' + item.name ? 'rgba(160, 36, 180, 0.3)' : 'rgba(160, 36, 180, 0.1)',
+                },
+              }}
+            >
+              <ListItemIcon>
+                {item.isDirectory ? <FaFolder color="yellow" /> : getFileIcon(item.name)}
+              </ListItemIcon>
+              <ListItemText primary={item.name} sx={{ color: 'white' }} />
+            </ListItem>
+          </React.Fragment>
+        ))}
+      </List>
+    </Fade>
   );
 
   const getFileIcon = (fileName) => {
@@ -536,19 +540,19 @@ function ChatPage({ onBackToMenu }) {
 
         switch (fileExtension) {
           case 'js':
-            IconComponent = FaJsSquare;
+            IconComponent = <FaJsSquare color="yellow" />;
             break;
           case 'py':
-            IconComponent = FaPython;
+            IconComponent = <FaPython color="blue" />;
             break;
           case 'html':
-            IconComponent = FaHtml5;
+            IconComponent = <FaHtml5 color="orange" />;
             break;
           case 'css':
-            IconComponent = FaCss3Alt;
+            IconComponent = <FaCss3Alt color="blue" />;
             break;
           default:
-            IconComponent = FaFile;
+            IconComponent = <FaFile color="white" />;
         }
 
         return (
@@ -568,8 +572,8 @@ function ChatPage({ onBackToMenu }) {
               },
             }}
           >
-            <IconComponent style={{ marginRight: 8 }} />
-            <Typography sx={{ flexGrow: 1, mr: 1 }}>{file.name}</Typography>
+            {IconComponent}
+            <Typography sx={{ flexGrow: 1, mr: 1, ml: 1 }}>{file.name}</Typography>
             <IconButton
               size="small"
               onClick={() => handleRemoveFile(file.name)}
@@ -629,25 +633,27 @@ function ChatPage({ onBackToMenu }) {
             </Box>
             <Collapse in={isFileSelectionOpen}>
               {currentDirectory && (
-                <Button onClick={handleBack} variant="outlined" sx={{ mb: 1 }}>
+                <Button onClick={handleBack} variant="outlined" sx={{ mb: 1, ml: 1 }}>
                   Back
                 </Button>
               )}
-              <List>
-                {filesAndDirs.map((item) => (
-                  <ListItem
-                    button
-                    key={item.name}
-                    onClick={() => handleFileSelect(item.name)}
-                    sx={{ backgroundColor: selectedFiles.some(file => file.name === item.name) ? 'rgba(160, 36, 180, 0.3)' : 'inherit' }}
-                  >
-                    <ListItemIcon>
-                      {getFileIcon(item.name)}
-                    </ListItemIcon>
-                    <ListItemText primary={item.name} sx={{ color: 'white' }} />
-                  </ListItem>
-                ))}
-              </List>
+              <Fade in={!transitioning}>
+                <List>
+                  {filesAndDirs.map((item) => (
+                    <ListItem
+                      button
+                      key={item.name}
+                      onClick={() => handleFileSelect(item.name)}
+                      sx={{ backgroundColor: selectedFiles.some(file => file.name === item.name) ? 'rgba(160, 36, 180, 0.3)' : 'inherit' }}
+                    >
+                      <ListItemIcon>
+                        {item.isDirectory ? <FaFolder color="yellow" /> : getFileIcon(item.name)}
+                      </ListItemIcon>
+                      <ListItemText primary={item.name} sx={{ color: 'white' }} />
+                    </ListItem>
+                  ))}
+                </List>
+              </Fade>
             </Collapse>
           </Box>
         )}
