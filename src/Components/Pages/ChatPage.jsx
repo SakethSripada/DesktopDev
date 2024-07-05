@@ -54,6 +54,20 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Alert from '../Alert';
+import {
+  fetchDirectoryTree,
+  handleFileSelect,
+  handleBreadcrumbClick,
+  handleSendMessage,
+  handleExecute,
+  handleExecuteConfirm,
+  handleInsertConfirm,
+  handleContinueGeneration,
+  handleCopy,
+  handlePathSubmit,
+  handleRemoveFile,
+  getFileIcon
+} from '../../functions/chatFunctions';
 import axios from 'axios';
 
 const theme = createTheme({
@@ -98,123 +112,32 @@ function ChatPage({ onBackToMenu }) {
   useEffect(() => {
     if (isConnected) {
       setFileInsertPath(path);
-      fetchDirectoryTree(path);
+      fetchDirectoryTree(path, setDirectoryTree, setAlert);
     }
   }, [isConnected, path]);
-
-  const handleInputChange = (e) => {
-    setInput(e.target.value);
-  };
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    } else if (e.key === 'ArrowUp') {
-      const lastUserMessage = messages.slice().reverse().find((msg) => msg.sender === 'user');
-      if (lastUserMessage) {
-        setInput(lastUserMessage.text);
-      }
-    }
-  };
 
   const handlePathChange = (e) => {
     setPath(e.target.value);
   };
 
-  const handleSendMessage = async () => {
-    if (input.trim()) {
-      const userMessage = { text: input, sender: 'user' };
-      setMessages((prevMessages) => [...prevMessages, userMessage]);
-      setInput('');
-      setIsTyping(true);
-
-      const updatedConversationHistory = [
-        ...conversationHistory,
-        { role: 'user', content: input },
-        ...selectedFiles.map((file) => ({
-          role: 'system',
-          content: `Content of ${file.name}:\n${file.content}`,
-        })),
-      ];
-
-      const validConversationHistory = updatedConversationHistory.slice(-5).filter(msg => msg.content && msg.content.trim());
-
-      try {
-        const response = await fetch('http://localhost:5000/api/generate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ conversationHistory: validConversationHistory }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-
-        const data = await response.json();
-        const botMessage = { text: data.response.trim(), sender: 'bot', id: data.id, isContinued: data.isContinued };
-        setMessages((prevMessages) => [...prevMessages, botMessage]);
-
-        setConversationHistory((prevHistory) => [...prevHistory, { role: 'assistant', content: data.response.trim() }]);
-      } catch (error) {
-        console.error('Error fetching response:', error);
-        const botMessage = { text: 'Error generating response. Please try again.', sender: 'bot' };
-        setMessages((prevMessages) => [...prevMessages, botMessage]);
-      } finally {
-        setIsTyping(false);
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage(
+        input, 
+        setInput, 
+        setIsTyping, 
+        conversationHistory, 
+        selectedFiles, 
+        setMessages, 
+        setConversationHistory, 
+        setAlert
+      );
+    } else if (e.key === 'ArrowUp') {
+      const lastUserMessage = messages.slice().reverse().find((msg) => msg.sender === 'user');
+      if (lastUserMessage) {
+        setInput(lastUserMessage.text);
       }
-    }
-  };
-
-  const handleCopy = (text) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setAlert({ open: true, severity: 'success', message: 'Copied to clipboard!' });
-    }).catch((err) => {
-      console.error('Failed to copy: ', err);
-      setAlert({ open: true, severity: 'error', message: 'Failed to copy to clipboard.' });
-    });
-  };
-
-  const handleExecute = (command) => {
-    if (!isConnected) {
-      setAlert({ open: true, severity: 'warning', message: 'No path connected. Please connect to a path first.' });
-      return;
-    }
-    setCommandToExecute(command);
-    setIsModalOpen(true);
-  };
-
-  const handleExecuteConfirm = async () => {
-    setIsModalOpen(false);
-    try {
-      const response = await axios.post('http://localhost:5000/api/execute-command', {
-        path: fileInsertPath,
-        command: commandToExecute,
-      });
-      setAlert({ open: true, severity: 'success', message: `Command executed: ${response.data.output}` });
-    } catch (error) {
-      console.error('Error executing command:', error);
-      setAlert({ open: true, severity: 'error', message: 'Failed to execute command.' });
-    }
-  };
-
-  const handlePathSubmit = async (e) => {
-    e.preventDefault();
-    if (!path.trim()) {
-      setAlert({ open: true, severity: 'error', message: 'Please enter a directory path.' });
-      return;
-    }
-    try {
-      const response = await axios.post('http://localhost:5000/api/list-files', { path });
-      setFilesAndDirs(response.data.filesAndDirs);
-      setIsConnected(true);
-      setAlert({ open: true, severity: 'success', message: 'Connected to project path successfully!' });
-    } catch (error) {
-      console.error('Error listing files:', error);
-      setAlert({ open: true, severity: 'error', message: 'Failed to list files.' });
-      setIsConnected(false);
     }
   };
 
@@ -225,46 +148,6 @@ function ChatPage({ onBackToMenu }) {
     setPath('');
     setCurrentDirectory('');
     setFileInsertPath('');
-  };
-
-  const handleFileSelect = async (filePath) => {
-    setTransitioning(true);
-    const trimmedFilePath = filePath.trim();
-    const currentDirPath = currentDirectory ? `${currentDirectory.trim()}/${trimmedFilePath}` : trimmedFilePath;
-    const newPath = `${path.trim()}/${currentDirPath}`;
-  
-    if (filesAndDirs.find((item) => item.name === trimmedFilePath && item.isDirectory)) {
-      setCurrentDirectory(currentDirPath);
-      try {
-        const response = await axios.post('http://localhost:5000/api/list-files', { path: newPath });
-        setFilesAndDirs(response.data.filesAndDirs);
-      } catch (error) {
-        console.error('Error listing files:', error);
-        setAlert({ open: true, severity: 'error', message: 'Failed to list files.' });
-      }
-    } else {
-      if (selectedFiles.find((file) => file.name === trimmedFilePath)) {
-        setSelectedFiles((prev) => prev.filter((file) => file.name !== trimmedFilePath));
-      } else {
-        try {
-          const response = await axios.post('http://localhost:5000/api/read-file', {
-            projectPath: path.trim(),
-            filePath: currentDirPath,
-          });
-          const fileContent = response.data.content;
-          setSelectedFiles((prev) => [...prev, { name: trimmedFilePath, content: fileContent }]);
-        } catch (error) {
-          console.error('Error reading file:', error);
-          setAlert({ open: true, severity: 'error', message: 'Failed to read file.' });
-        }
-      }
-    }
-    setTransitioning(false);
-  };
-  
-
-  const handleRemoveFile = (fileName) => {
-    setSelectedFiles((prev) => prev.filter((file) => file.name !== fileName));
   };
 
   const handleBack = async () => {
@@ -299,51 +182,8 @@ function ChatPage({ onBackToMenu }) {
 
     setCodeToInsert(cleanedCode);
     setIsInsertModalOpen(true);
-    fetchDirectoryTree(fileInsertPath);
+    fetchDirectoryTree(fileInsertPath, setDirectoryTree, setAlert);
   };
-
-  const handleInsertConfirm = async () => {
-    setIsInsertModalOpen(false);
-    try {
-      const response = await axios.post('http://localhost:5000/api/insert-code', {
-        path: fileInsertPath,
-        fileName: newFileName,
-        code: codeToInsert,
-      });
-      setAlert({ open: true, severity: 'success', message: `Code inserted into file: ${newFileName}` });
-    } catch (error) {
-      console.error('Error inserting code:', error);
-      setAlert({ open: true, severity: 'error', message: 'Failed to insert code into file.' });
-    }
-  };
-
-  const fetchDirectoryTree = async (basePath) => {
-    try {
-      const response = await axios.post('http://localhost:5000/api/list-files', { path: basePath.trim() });
-      setDirectoryTree(response.data.filesAndDirs.filter(item => item.isDirectory));
-    } catch (error) {
-      console.error('Error fetching directory tree:', error);
-      setAlert({ open: true, severity: 'error', message: 'Failed to fetch directory tree.' });
-    }
-  };  
-  
-
-  const handleBreadcrumbClick = async (index) => {
-    const pathParts = fileInsertPath.split('/').map(part => part.trim());
-    const newPath = pathParts.slice(0, index + 1).join('/');
-    setFileInsertPath(newPath);
-    setCurrentDirectory(newPath.replace(path.trim(), '').substring(1).trim());
-  
-    try {
-      const response = await axios.post('http://localhost:5000/api/list-files', { path: newPath });
-      setDirectoryTree(response.data.filesAndDirs.filter(item => item.isDirectory));
-    } catch (error) {
-      console.error('Error listing files:', error);
-      setAlert({ open: true, severity: 'error', message: 'Failed to list files.' });
-    }
-  };
-  
-  
 
   const renderBreadcrumbs = () => {
     const pathParts = fileInsertPath.split('/');
@@ -353,7 +193,7 @@ function ChatPage({ onBackToMenu }) {
           <Link
             key={index}
             color="inherit"
-            onClick={() => handleBreadcrumbClick(index)}
+            onClick={() => handleBreadcrumbClick(index, fileInsertPath, setFileInsertPath, path, setCurrentDirectory, setDirectoryTree, setAlert)}
             sx={{ cursor: 'pointer' }}
           >
             {part || 'Root'}
@@ -373,7 +213,7 @@ function ChatPage({ onBackToMenu }) {
               onClick={() => {
                 const newPath = `${basePath.trim()}/${item.name.trim()}`;
                 setFileInsertPath(newPath);
-                fetchDirectoryTree(newPath);
+                fetchDirectoryTree(newPath, setDirectoryTree, setAlert);
               }}
               sx={{
                 pl: basePath === path ? 2 : 4,
@@ -393,98 +233,6 @@ function ChatPage({ onBackToMenu }) {
       </List>
     </Fade>
   );
-  
-  
-
-  const getFileIcon = (fileName) => {
-    const fileExtension = fileName.split('.').pop();
-    switch (fileExtension) {
-      case 'js':
-        return <FaJsSquare color="yellow" />;
-      case 'py':
-        return <FaPython color="blue" />;
-      case 'html':
-        return <FaHtml5 color="orange" />;
-      case 'css':
-        return <FaCss3Alt color="blue" />;
-      case 'java':
-        return <FaJava color="red" />;
-      case 'cpp':
-      case 'c':
-        return <FaCuttlefish color="blue" />;
-      case 'cs':
-        return <FaFileCode color="purple" />;
-      case 'php':
-        return <FaPhp color="violet" />;
-      case 'rb':
-        return <FaGem color="red" />;
-      case 'go':
-        return <FaBolt color="teal" />;
-      case 'rs':
-        return <FaRust color="brown" />;
-      case 'ts':
-        return <FaJsSquare color="lightblue" />;
-      case 'json':
-        return <FaFileCode color="green" />;
-      case 'xml':
-        return <FaFileCode color="orange" />;
-      case 'sh':
-        return <FaTerminal color="lightgrey" />;
-      case 'md':
-        return <FaMarkdown color="blue" />;
-      case 'gitignore':
-        return <FaGitAlt color="orange" />;
-      case 'svg':
-      case 'png':
-      case 'jpg':
-      case 'jpeg':
-      case 'gif':
-        return <FaFileImage color="pink" />;
-      default:
-        return <FaFile color="white" />;
-    }
-  };
-  
-
-  const handleContinueGeneration = async (messageId) => {
-    setIsTyping(true);
-    const lastMessages = conversationHistory.slice(-5);
-    try {
-      const response = await fetch('http://localhost:5000/api/continue-generation', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ conversationHistory: lastMessages }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
-      const data = await response.json();
-      const lastMessageIndex = messages.findIndex(msg => msg.id === messageId);
-      const lastMessage = messages[lastMessageIndex];
-      const updatedText = lastMessage.text + data.response.trim();
-
-      const updatedMessages = [...messages];
-      updatedMessages[lastMessageIndex] = {
-        ...lastMessage,
-        text: updatedText,
-        isContinued: data.isContinued,
-      };
-
-      setMessages(updatedMessages);
-
-      setConversationHistory((prevHistory) => [...prevHistory, { role: 'assistant', content: data.response.trim() }]);
-    } catch (error) {
-      console.error('Error continuing generation:', error);
-      const botMessage = { text: 'Error generating response. Please try again.', sender: 'bot' };
-      setMessages((prevMessages) => [...prevMessages, botMessage]);
-    } finally {
-      setIsTyping(false);
-    }
-  };
 
   const renderMessages = () => {
     return messages.map((msg, index) => {
@@ -517,7 +265,7 @@ function ChatPage({ onBackToMenu }) {
                     </SyntaxHighlighter>
                     <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 2 }}>
                       <IconButton
-                        onClick={() => handleCopy(codeContent)}
+                        onClick={() => handleCopy(codeContent, setAlert)}
                         size="small"
                         sx={{
                           backgroundColor: '#3e3e3e',
@@ -529,7 +277,7 @@ function ChatPage({ onBackToMenu }) {
                         <FaCopy style={{ color: '#007bff' }} />
                       </IconButton>
                       <IconButton
-                        onClick={() => handleExecute(codeContent)}
+                        onClick={() => handleExecute(codeContent, isConnected, setAlert, setCommandToExecute, setIsModalOpen)}
                         size="small"
                         sx={{
                           backgroundColor: '#3e3e3e',
@@ -582,7 +330,7 @@ function ChatPage({ onBackToMenu }) {
             })}
             {msg.isContinued && (
               <Button
-                onClick={() => handleContinueGeneration(msg.id)}
+                onClick={() => handleContinueGeneration(msg.id, conversationHistory, setMessages, messages, setIsTyping, setConversationHistory)}
                 startIcon={<FaRedo />}
                 sx={{ mt: 1, color: '#007bff' }}
               >
@@ -599,24 +347,7 @@ function ChatPage({ onBackToMenu }) {
     <Box sx={{ display: 'flex', flexWrap: 'wrap', mb: 2 }}>
       {selectedFiles.map((file) => {
         const fileExtension = file.name.split('.').pop();
-        let IconComponent;
-
-        switch (fileExtension) {
-          case 'js':
-            IconComponent = <FaJsSquare color="yellow" />;
-            break;
-          case 'py':
-            IconComponent = <FaPython color="blue" />;
-            break;
-          case 'html':
-            IconComponent = <FaHtml5 color="orange" />;
-            break;
-          case 'css':
-            IconComponent = <FaCss3Alt color="blue" />;
-            break;
-          default:
-            IconComponent = <FaFile color="white" />;
-        }
+        let IconComponent = getFileIcon(file.name);
 
         return (
           <Paper
@@ -639,7 +370,7 @@ function ChatPage({ onBackToMenu }) {
             <Typography sx={{ flexGrow: 1, mr: 1, ml: 1 }}>{file.name}</Typography>
             <IconButton
               size="small"
-              onClick={() => handleRemoveFile(file.name)}
+              onClick={() => handleRemoveFile(file.name, setSelectedFiles)}
               sx={{
                 backgroundColor: '#3e3e3e',
                 '&:hover': {
@@ -670,7 +401,7 @@ function ChatPage({ onBackToMenu }) {
               sx={{ ml: 1, flex: 1, color: 'white' }}
             />
             {!isConnected ? (
-              <Button type="submit" variant="contained" color="primary" onClick={handlePathSubmit}>
+              <Button type="submit" variant="contained" color="primary" onClick={(e) => handlePathSubmit(e, path, setFilesAndDirs, setIsConnected, setAlert)}>
                 Connect
               </Button>
             ) : (
@@ -706,7 +437,7 @@ function ChatPage({ onBackToMenu }) {
                     <ListItem
                       button
                       key={item.name}
-                      onClick={() => handleFileSelect(item.name)}
+                      onClick={() => handleFileSelect(item.name, currentDirectory, path, filesAndDirs, setCurrentDirectory, setFilesAndDirs, selectedFiles, setSelectedFiles, setTransitioning, setAlert)}
                       sx={{ backgroundColor: selectedFiles.some(file => file.name === item.name) ? 'rgba(160, 36, 180, 0.3)' : 'inherit' }}
                     >
                       <ListItemIcon>
@@ -733,10 +464,10 @@ function ChatPage({ onBackToMenu }) {
         </Paper>
         <Box sx={{ mt: 2, backgroundColor: theme.palette.background.default, pb: 2 }}>
           {renderSelectedFilesTabs()}
-          <Paper component="form" onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} sx={{ display: 'flex', alignItems: 'center', p: 1 }}>
+          <Paper component="form" onSubmit={(e) => { e.preventDefault(); handleSendMessage(input, setInput, setIsTyping, conversationHistory, selectedFiles, setMessages, setConversationHistory, setAlert); }} sx={{ display: 'flex', alignItems: 'center', p: 1 }}>
             <TextField
               value={input}
-              onChange={handleInputChange}
+              onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyPress}
               placeholder="Type a message..."
               variant="outlined"
@@ -768,7 +499,7 @@ function ChatPage({ onBackToMenu }) {
             <Button onClick={() => setIsModalOpen(false)} color="secondary">
               Cancel
             </Button>
-            <Button onClick={handleExecuteConfirm} color="primary">
+            <Button onClick={() => handleExecuteConfirm(commandToExecute, fileInsertPath, setAlert, setIsModalOpen)} color="primary">
               Execute
             </Button>
           </DialogActions>
@@ -802,7 +533,7 @@ function ChatPage({ onBackToMenu }) {
                   onClick={() => {
                     setFileInsertPath(path);
                     setCurrentDirectory('');
-                    fetchDirectoryTree(path);
+                    fetchDirectoryTree(path, setDirectoryTree, setAlert);
                   }}
                   sx={{
                     pl: 2,
@@ -828,7 +559,7 @@ function ChatPage({ onBackToMenu }) {
             <Button onClick={() => setIsInsertModalOpen(false)} color="secondary">
               Cancel
             </Button>
-            <Button onClick={handleInsertConfirm} color="primary">
+            <Button onClick={() => handleInsertConfirm(fileInsertPath, newFileName, codeToInsert, setAlert, setIsInsertModalOpen)} color="primary">
               Insert
             </Button>
           </DialogActions>
