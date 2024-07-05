@@ -108,10 +108,12 @@ function ChatPage({ onBackToMenu }) {
     { role: 'system', content: 'You are a helpful assistant.' }
   ]);
   const [transitioning, setTransitioning] = useState(false);
+  const [executePath, setExecutePath] = useState('');
 
   useEffect(() => {
     if (isConnected) {
       setFileInsertPath(path);
+      setExecutePath(path);
       fetchDirectoryTree(path, setDirectoryTree, setAlert);
     }
   }, [isConnected, path]);
@@ -148,6 +150,7 @@ function ChatPage({ onBackToMenu }) {
     setPath('');
     setCurrentDirectory('');
     setFileInsertPath('');
+    setExecutePath('');
   };
 
   const handleBack = async () => {
@@ -185,15 +188,15 @@ function ChatPage({ onBackToMenu }) {
     fetchDirectoryTree(fileInsertPath, setDirectoryTree, setAlert);
   };
 
-  const renderBreadcrumbs = () => {
-    const pathParts = fileInsertPath.split('/');
+  const renderBreadcrumbs = (path, setPath, setCurrentDirectory) => {
+    const pathParts = path.split('/');
     return (
       <Breadcrumbs aria-label="breadcrumb">
         {pathParts.map((part, index) => (
           <Link
             key={index}
             color="inherit"
-            onClick={() => handleBreadcrumbClick(index, fileInsertPath, setFileInsertPath, path, setCurrentDirectory, setDirectoryTree, setAlert)}
+            onClick={() => handleBreadcrumbClick(index, path, setPath, setCurrentDirectory, fetchDirectoryTree, setDirectoryTree, setAlert)}
             sx={{ cursor: 'pointer' }}
           >
             {part || 'Root'}
@@ -203,7 +206,7 @@ function ChatPage({ onBackToMenu }) {
     );
   };
 
-  const renderDirectoryTree = (tree, basePath) => (
+  const renderDirectoryTree = (tree, basePath, setPath, setCurrentDirectory) => (
     <Fade in={!transitioning}>
       <List>
         {tree.map((item) => (
@@ -212,14 +215,14 @@ function ChatPage({ onBackToMenu }) {
               button
               onClick={() => {
                 const newPath = `${basePath.trim()}/${item.name.trim()}`;
-                setFileInsertPath(newPath);
+                setPath(newPath);
                 fetchDirectoryTree(newPath, setDirectoryTree, setAlert);
               }}
               sx={{
                 pl: basePath === path ? 2 : 4,
-                backgroundColor: fileInsertPath === `${basePath.trim()}/${item.name.trim()}` ? 'rgba(160, 36, 180, 0.3)' : 'inherit',
+                backgroundColor: path === `${basePath.trim()}/${item.name.trim()}` ? 'rgba(160, 36, 180, 0.3)' : 'inherit',
                 '&:hover': {
-                  backgroundColor: fileInsertPath === `${basePath.trim()}/${item.name.trim()}` ? 'rgba(160, 36, 180, 0.3)' : 'rgba(160, 36, 180, 0.1)',
+                  backgroundColor: path === `${basePath.trim()}/${item.name.trim()}` ? 'rgba(160, 36, 180, 0.3)' : 'rgba(160, 36, 180, 0.1)',
                 },
               }}
             >
@@ -494,12 +497,39 @@ function ChatPage({ onBackToMenu }) {
             <DialogContentText>
               Confirm the execution of this command in the specified directory.
             </DialogContentText>
+            <Box>
+              <Typography variant="subtitle1">Select Directory:</Typography>
+              {renderBreadcrumbs(executePath, setExecutePath, setCurrentDirectory)}
+              <List>
+                <ListItem
+                  button
+                  onClick={() => {
+                    setExecutePath(path);
+                    setCurrentDirectory('');
+                    fetchDirectoryTree(path, setDirectoryTree, setAlert);
+                  }}
+                  sx={{
+                    pl: 2,
+                    backgroundColor: executePath === path ? 'rgba(160, 36, 180, 0.3)' : 'inherit',
+                    '&:hover': {
+                      backgroundColor: executePath === path ? 'rgba(160, 36, 180, 0.3)' : 'rgba(160, 36, 180, 0.1)',
+                    },
+                  }}
+                >
+                  <ListItemIcon>
+                    <FaFolder color="yellow" />
+                  </ListItemIcon>
+                  <ListItemText primary="Root Directory" />
+                </ListItem>
+              </List>
+              {renderDirectoryTree(directoryTree, executePath, setExecutePath, setCurrentDirectory)}
+            </Box>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setIsModalOpen(false)} color="secondary">
               Cancel
             </Button>
-            <Button onClick={() => handleExecuteConfirm(commandToExecute, fileInsertPath, setAlert, setIsModalOpen)} color="primary">
+            <Button onClick={() => handleExecuteConfirm(commandToExecute, executePath, setAlert, setIsModalOpen)} color="primary">
               Execute
             </Button>
           </DialogActions>
@@ -526,7 +556,7 @@ function ChatPage({ onBackToMenu }) {
             />
             <Box>
               <Typography variant="subtitle1">Select Directory:</Typography>
-              {renderBreadcrumbs()}
+              {renderBreadcrumbs(fileInsertPath, setFileInsertPath, setCurrentDirectory)}
               <List>
                 <ListItem
                   button
@@ -549,7 +579,7 @@ function ChatPage({ onBackToMenu }) {
                   <ListItemText primary="Root Directory" />
                 </ListItem>
               </List>
-              {renderDirectoryTree(directoryTree, fileInsertPath)}
+              {renderDirectoryTree(directoryTree, fileInsertPath, setFileInsertPath, setCurrentDirectory)}
             </Box>
             <DialogContentText>
               Confirm the name of the new file and the directory where this code will be inserted.
