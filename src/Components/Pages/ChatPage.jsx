@@ -229,9 +229,12 @@ function ChatPage({ onBackToMenu }) {
 
   const handleFileSelect = async (filePath) => {
     setTransitioning(true);
-    if (filesAndDirs.find((item) => item.name === filePath && item.isDirectory)) {
-      setCurrentDirectory((prev) => (prev ? `${prev}/${filePath}` : filePath));
-      const newPath = path + '/' + (currentDirectory ? `${currentDirectory}/${filePath}` : filePath);
+    const trimmedFilePath = filePath.trim();
+    const currentDirPath = currentDirectory ? `${currentDirectory.trim()}/${trimmedFilePath}` : trimmedFilePath;
+    const newPath = `${path.trim()}/${currentDirPath}`;
+  
+    if (filesAndDirs.find((item) => item.name === trimmedFilePath && item.isDirectory)) {
+      setCurrentDirectory(currentDirPath);
       try {
         const response = await axios.post('http://localhost:5000/api/list-files', { path: newPath });
         setFilesAndDirs(response.data.filesAndDirs);
@@ -240,16 +243,16 @@ function ChatPage({ onBackToMenu }) {
         setAlert({ open: true, severity: 'error', message: 'Failed to list files.' });
       }
     } else {
-      if (selectedFiles.find((file) => file.name === filePath)) {
-        setSelectedFiles((prev) => prev.filter((file) => file.name !== filePath));
+      if (selectedFiles.find((file) => file.name === trimmedFilePath)) {
+        setSelectedFiles((prev) => prev.filter((file) => file.name !== trimmedFilePath));
       } else {
         try {
           const response = await axios.post('http://localhost:5000/api/read-file', {
-            projectPath: path,
-            filePath: currentDirectory ? `${currentDirectory}/${filePath}` : filePath,
+            projectPath: path.trim(),
+            filePath: currentDirPath,
           });
           const fileContent = response.data.content;
-          setSelectedFiles((prev) => [...prev, { name: filePath, content: fileContent }]);
+          setSelectedFiles((prev) => [...prev, { name: trimmedFilePath, content: fileContent }]);
         } catch (error) {
           console.error('Error reading file:', error);
           setAlert({ open: true, severity: 'error', message: 'Failed to read file.' });
@@ -258,6 +261,7 @@ function ChatPage({ onBackToMenu }) {
     }
     setTransitioning(false);
   };
+  
 
   const handleRemoveFile = (fileName) => {
     setSelectedFiles((prev) => prev.filter((file) => file.name !== fileName));
@@ -315,19 +319,21 @@ function ChatPage({ onBackToMenu }) {
 
   const fetchDirectoryTree = async (basePath) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/list-files', { path: basePath });
+      const response = await axios.post('http://localhost:5000/api/list-files', { path: basePath.trim() });
       setDirectoryTree(response.data.filesAndDirs.filter(item => item.isDirectory));
     } catch (error) {
       console.error('Error fetching directory tree:', error);
+      setAlert({ open: true, severity: 'error', message: 'Failed to fetch directory tree.' });
     }
-  };
+  };  
+  
 
   const handleBreadcrumbClick = async (index) => {
-    const pathParts = fileInsertPath.split('/');
+    const pathParts = fileInsertPath.split('/').map(part => part.trim());
     const newPath = pathParts.slice(0, index + 1).join('/');
     setFileInsertPath(newPath);
-    setCurrentDirectory(newPath.replace(path, '').substring(1));
-
+    setCurrentDirectory(newPath.replace(path.trim(), '').substring(1).trim());
+  
     try {
       const response = await axios.post('http://localhost:5000/api/list-files', { path: newPath });
       setDirectoryTree(response.data.filesAndDirs.filter(item => item.isDirectory));
@@ -336,6 +342,8 @@ function ChatPage({ onBackToMenu }) {
       setAlert({ open: true, severity: 'error', message: 'Failed to list files.' });
     }
   };
+  
+  
 
   const renderBreadcrumbs = () => {
     const pathParts = fileInsertPath.split('/');
@@ -362,17 +370,21 @@ function ChatPage({ onBackToMenu }) {
           <React.Fragment key={item.name}>
             <ListItem
               button
-              onClick={() => handleFileSelect(item.name)}
+              onClick={() => {
+                const newPath = `${basePath.trim()}/${item.name.trim()}`;
+                setFileInsertPath(newPath);
+                fetchDirectoryTree(newPath);
+              }}
               sx={{
                 pl: basePath === path ? 2 : 4,
-                backgroundColor: fileInsertPath === basePath + '/' + item.name ? 'rgba(160, 36, 180, 0.3)' : 'inherit',
+                backgroundColor: fileInsertPath === `${basePath.trim()}/${item.name.trim()}` ? 'rgba(160, 36, 180, 0.3)' : 'inherit',
                 '&:hover': {
-                  backgroundColor: fileInsertPath === basePath + '/' + item.name ? 'rgba(160, 36, 180, 0.3)' : 'rgba(160, 36, 180, 0.1)',
+                  backgroundColor: fileInsertPath === `${basePath.trim()}/${item.name.trim()}` ? 'rgba(160, 36, 180, 0.3)' : 'rgba(160, 36, 180, 0.1)',
                 },
               }}
             >
               <ListItemIcon>
-                {item.isDirectory ? <FaFolder color="yellow" /> : getFileIcon(item.name)}
+                <FaFolder color="yellow" />
               </ListItemIcon>
               <ListItemText primary={item.name} sx={{ color: 'white' }} />
             </ListItem>
@@ -381,6 +393,8 @@ function ChatPage({ onBackToMenu }) {
       </List>
     </Fade>
   );
+  
+  
 
   const getFileIcon = (fileName) => {
     const fileExtension = fileName.split('.').pop();
