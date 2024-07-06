@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Button, Typography, Grid, Menu, MenuItem, TextField } from '@mui/material';
+import { Box, Button, Typography, Grid, Menu, MenuItem, TextField, CircularProgress, Select, InputLabel, FormControl } from '@mui/material';
+import { FaCheckCircle } from 'react-icons/fa';
 import axios from 'axios';
 import Alert from '../Alert';
 import RepoTabs from '../RepoTabs';
@@ -44,6 +45,10 @@ function GitPage({ onBackToMenu }) {
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [alertSeverity, setAlertSeverity] = useState('info');
+  const [githubAuthenticated, setGithubAuthenticated] = useState(false);
+  const [githubRepos, setGithubRepos] = useState([]);
+  const [selectedRepo, setSelectedRepo] = useState('');
+  const [loadingRepos, setLoadingRepos] = useState(false);
 
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
@@ -157,6 +162,33 @@ function GitPage({ onBackToMenu }) {
     setAlertOpen(false);
   };
 
+  const handleGithubAuth = () => {
+    const width = 600, height = 600;
+    const left = (window.innerWidth / 2) - (width / 2);
+    const top = (window.innerHeight / 2) - (height / 2);
+    const authWindow = window.open('http://localhost:5000/auth/github', 'GitHubAuth', `width=${width},height=${height},top=${top},left=${left}`);
+    
+    const checkWindowClosed = setInterval(() => {
+      if (authWindow.closed) {
+        clearInterval(checkWindowClosed);
+        setGithubAuthenticated(true);
+        fetchGithubRepos();
+      }
+    }, 1000);
+  };
+
+  const fetchGithubRepos = async () => {
+    setLoadingRepos(true);
+    try {
+      const response = await axios.get('http://localhost:5000/auth/github/repositories', { withCredentials: true });
+      setGithubRepos(response.data);
+    } catch (error) {
+      showAlert('Failed to fetch GitHub repositories.', 'error');
+    } finally {
+      setLoadingRepos(false);
+    }
+  };
+
   useEffect(() => {
     fetchBranches(repoTabs, currentTab, setBranches, setCurrentBranch, showAlert);
   }, [currentTab]);
@@ -190,68 +222,49 @@ function GitPage({ onBackToMenu }) {
               Local Config
             </Button>
           </Box>
-          <Box className="input-fields-container">
+          <Box className="input-fields-container" sx={{ marginTop: 4 }}>
             {repoTabs.map((tab, index) => (
               <Box hidden={currentTab !== index} key={index} sx={{ width: '100%' }}>
                 {currentConfig === 'remote' ? (
                   <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        label="Repository URL"
-                        variant="outlined"
-                        fullWidth
-                        margin="normal"
-                        value={tab.repoUrl}
-                        onChange={(e) => handleRepoInputChange(index, 'repoUrl', e.target.value)}
-                        InputLabelProps={{ style: { color: 'white' } }}
-                        InputProps={{ style: { color: 'white' } }}
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        label="GitHub Username"
-                        variant="outlined"
-                        fullWidth
-                        margin="normal"
-                        value={tab.githubUsername}
-                        onChange={(e) => handleRepoInputChange(index, 'githubUsername', e.target.value)}
-                        InputLabelProps={{ style: { color: 'white' } }}
-                        InputProps={{ style: { color: 'white' } }}
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        label="GitHub Token"
-                        variant="outlined"
-                        fullWidth
-                        margin="normal"
-                        value={tab.githubToken}
-                        onChange={(e) => handleRepoInputChange(index, 'githubToken', e.target.value)}
-                        InputLabelProps={{ style: { color: 'white' } }}
-                        InputProps={{ style: { color: 'white' } }}
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        label="Branch Name"
-                        variant="outlined"
-                        fullWidth
-                        margin="normal"
-                        value={tab.branchName}
-                        onChange={(e) => handleRepoInputChange(index, 'branchName', e.target.value)}
-                        InputLabelProps={{ style: { color: 'white' } }}
-                        InputProps={{ style: { color: 'white' } }}
-                      />
-                    </Grid>
-                    <Grid item xs={12}>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={() => handleCloneRepo(repoTabs, currentTab, showAlert)}
-                        style={{ marginTop: '20px' }}
-                      >
-                        Clone Repository
-                      </Button>
+                    <Grid item xs={12} sx={{ marginBottom: 6 }}>
+                      {githubAuthenticated ? (
+                        <>
+                          <Box display="flex" alignItems="center" marginBottom={4} sx={{ marginTop: 2 }}>
+                            <FaCheckCircle color="green" style={{ marginRight: '8px' }} />
+                            <Typography variant="body1" style={{ fontSize: '1rem' }}>Authenticated with GitHub</Typography>
+                          </Box>
+                          <FormControl fullWidth margin="normal">
+                            <InputLabel style={{ color: 'white' }}>Select Repository</InputLabel>
+                            <Select
+                              value={selectedRepo}
+                              onChange={(e) => setSelectedRepo(e.target.value)}
+                              style={{ color: 'white' }}
+                            >
+                              {loadingRepos ? (
+                                <MenuItem disabled>
+                                  <CircularProgress size={24} />
+                                </MenuItem>
+                              ) : (
+                                githubRepos.map(repo => (
+                                  <MenuItem key={repo.id} value={repo.clone_url}>
+                                    {repo.name}
+                                  </MenuItem>
+                                ))
+                              )}
+                            </Select>
+                          </FormControl>
+                        </>
+                      ) : (
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          onClick={handleGithubAuth}
+                          style={{ marginTop: '20px' }}
+                        >
+                          Authenticate with GitHub
+                        </Button>
+                      )}
                     </Grid>
                   </Grid>
                 ) : (
