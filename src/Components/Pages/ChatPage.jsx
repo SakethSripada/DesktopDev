@@ -241,7 +241,26 @@ function ChatPage({ onBackToMenu }) {
     return messages.map((msg, index) => {
       const parts = msg.text.split(/(```[\s\S]*?\n[\s\S]*?```|```[\s\S]*?$)/g);
       let insideCodeBlock = false;
-
+  
+      const renderListItems = (text) => {
+        const lines = text.split('\n');
+        return (
+          <Box>
+            {lines.map((line, idx) => {
+              const match = line.match(/^(\d+)\. (.+)/);
+              if (match) {
+                return (
+                  <Typography key={idx} sx={{ color: '#fff' }}>
+                    <Box component="span" sx={{ color: '#ff4081', fontWeight: 'bold' }}>{match[1]}.</Box> {match[2]}
+                  </Typography>
+                );
+              }
+              return <Typography key={idx} sx={{ color: '#fff' }}>{line}</Typography>;
+            })}
+          </Box>
+        );
+      };
+  
       return (
         <Box key={index} sx={{ mb: 2, textAlign: msg.sender === 'user' ? 'right' : 'left' }}>
           <Paper
@@ -317,6 +336,8 @@ function ChatPage({ onBackToMenu }) {
                     </SyntaxHighlighter>
                   </Box>
                 );
+              } else if (/^\d+\. .+/.test(part)) {
+                return <Box key={i}>{renderListItems(part)}</Box>;
               } else {
                 if (insideCodeBlock) {
                   return (
@@ -345,6 +366,7 @@ function ChatPage({ onBackToMenu }) {
       );
     });
   };
+  
 
   const renderSelectedFilesTabs = () => (
     <Box sx={{ display: 'flex', flexWrap: 'wrap', mb: 2 }}>
