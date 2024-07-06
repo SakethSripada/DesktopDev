@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Button, Typography, Grid, Menu, MenuItem, TextField } from '@mui/material';
 import axios from 'axios';
 import Alert from '../Alert';
@@ -71,6 +71,8 @@ function GitPage({ onBackToMenu }) {
     setModalOpen(true);
     if (type === 'commit') {
       fetchChangedFiles(repoTabs, currentTab, setFiles, showAlert);
+    } else if (type === 'checkout') {
+      fetchBranches(repoTabs, currentTab, setBranches, setCurrentBranch, showAlert);
     }
   };
 
@@ -356,7 +358,7 @@ function GitPage({ onBackToMenu }) {
         branches={branches}
         checkoutBranch={checkoutBranch}
         setCheckoutBranch={setCheckoutBranch}
-        handleCheckoutBranch={() => handleCheckoutBranch(repoTabs, currentTab, checkoutBranch, showAlert, handleModalClose, () => fetchBranches(repoTabs, currentTab, setBranches, setCurrentBranch, showAlert))}
+        handleCheckoutBranch={() => handleCheckoutBranch(repoTabs, currentTab, checkoutBranch, showAlert, handleModalClose, setBranches, setCurrentBranch)}
       />
 
       <Menu

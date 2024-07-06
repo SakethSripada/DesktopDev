@@ -99,13 +99,13 @@ export const handleStash = async (repoTabs, currentTab, stashMessage, showAlert,
   }
 };
 
-export const handleCheckoutBranch = async (repoTabs, currentTab, checkoutBranch, showAlert, handleModalClose, fetchBranches) => {
+export const handleCheckoutBranch = async (repoTabs, currentTab, checkoutBranch, showAlert, handleModalClose, setBranches, setCurrentBranch) => {
   try {
     const { localPath } = repoTabs[currentTab];
     const response = await axios.post('http://localhost:5000/checkout', { branchName: checkoutBranch, localPath });
     showAlert(response.data.message, 'success');
     handleModalClose();
-    fetchBranches();
+    fetchBranches(repoTabs, currentTab, setBranches, setCurrentBranch, showAlert); 
   } catch (error) {
     showAlert(`Error: ${error.response.data.error}`, 'error');
   }
