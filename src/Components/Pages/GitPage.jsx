@@ -1,7 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Button, TextField, Typography, Grid, Tabs, Tab, AppBar, Dialog, DialogActions, DialogContent, DialogTitle, Checkbox, FormControlLabel, FormGroup, Menu, MenuItem } from '@mui/material';
+import { Box, Button, Typography, Grid, Menu, MenuItem, TextField } from '@mui/material';
 import axios from 'axios';
-import Alert from '../Alert'; 
+import Alert from '../Alert';
+import RepoTabs from '../RepoTabs';
+import GitActions from '../GitActions';
+import CommitDialog from '../CommitDialog';
+import PushDialog from '../PushDialog';
+import PullDialog from '../PullDialog';
+import StashDialog from '../StashDialog';
+import CheckoutDialog from '../CheckoutDialog';
+import RenameDialog from '../RenameDialog';
+import { 
+  handleCloneRepo, handleRunCommit, fetchChangedFiles, handleCommit, handleStageFiles, 
+  handlePush, handlePull, handleStash, handleCheckoutBranch, fetchBranches 
+} from '../../functions/gitFunctions';
 import '../styles/GitPage.css';
 
 function GitPage({ onBackToMenu }) {
@@ -54,46 +66,11 @@ function GitPage({ onBackToMenu }) {
     setCurrentTab(newRepoTabs.length - 1);
   };
 
-  const handleCloneRepo = async () => {
-    try {
-      const { repoUrl, localPath } = repoTabs[currentTab];
-      const response = await axios.post('http://localhost:5000/connect-repo', { repoUrl, localPath });
-      showAlert(response.data.message, 'success');
-    } catch (error) {
-      console.error('Error connecting to repository:', error);
-      if (error.response && error.response.data) {
-        showAlert(`Error: ${error.response.data.error}`, 'error');
-      } else {
-        showAlert('An unknown error occurred.', 'error');
-      }
-    }
-  };
-
-  const handleRunCommit = async () => {
-    try {
-      const { localPath } = repoTabs[currentTab];
-      const response = await axios.post('http://localhost:5000/run-commit', { commitHash, localPath });
-      showAlert(response.data.message, 'success');
-    } catch (error) {
-      showAlert(`Error: ${error.response.data.error}`, 'error');
-    }
-  };
-
-  const fetchChangedFiles = async () => {
-    try {
-      const { localPath } = repoTabs[currentTab];
-      const response = await axios.post('http://localhost:5000/get-status', { localPath });
-      setFiles(response.data.changedFiles);
-    } catch (error) {
-      showAlert(`Error: ${error.response.data.error}`, 'error');
-    }
-  };
-
   const handleModalOpen = (type) => {
     setModalType(type);
     setModalOpen(true);
     if (type === 'commit') {
-      fetchChangedFiles();
+      fetchChangedFiles(repoTabs, currentTab, setFiles, showAlert);
     }
   };
 
@@ -117,59 +94,6 @@ function GitPage({ onBackToMenu }) {
       setSelectedFiles(allFiles);
     } else {
       setSelectedFiles([]);
-    }
-  };
-
-  const handleCommit = async () => {
-    try {
-      const { localPath } = repoTabs[currentTab];
-      const filesToCommit = selectedFiles.join(',');
-      const branchToCommit = selectedCommitBranch || currentBranch;
-      await axios.post('http://localhost:5000/checkout', { branchName: branchToCommit, localPath }); 
-      const response = await axios.post('http://localhost:5000/commit', { commitMessage, filesToCommit, localPath, autoStage });
-      showAlert(response.data.message, 'success');
-      handleModalClose();
-    } catch (error) {
-      if (error.response.data.error === 'One or more files are not staged.') {
-        setStageFilesError(true);
-        setUnstagedFiles(error.response.data.unstagedFiles);
-      } else {
-        showAlert(`Error: ${error.response.data.error}`, 'error');
-      }
-    }
-  };
-
-  const handleStageFiles = async () => {
-    try {
-      const { localPath } = repoTabs[currentTab];
-      const response = await axios.post('http://localhost:5000/stage-files', { filesToCommit: selectedFiles.join(','), localPath });
-      showAlert(response.data.message, 'success');
-      setStageFilesError(false);
-      setUnstagedFiles([]);
-    } catch (error) {
-      showAlert(`Error: ${error.response.data.error}`, 'error');
-    }
-  };
-
-  const handlePush = async () => {
-    try {
-      const { branchName, localPath, repoUrl, githubUsername, githubToken } = repoTabs[currentTab];
-      const response = await axios.post('http://localhost:5000/push', { branchName, localPath, remoteUrl: repoUrl, githubUsername, githubToken });
-      showAlert(response.data.message, 'success');
-      handleModalClose();
-    } catch (error) {
-      showAlert(`Error: ${error.response.data.error}`, 'error');
-    }
-  };
-
-  const handlePull = async () => {
-    try {
-      const { branchName, localPath, repoUrl, githubUsername, githubToken } = repoTabs[currentTab];
-      const response = await axios.post('http://localhost:5000/pull', { branchName, localPath, remoteUrl: repoUrl, githubUsername, githubToken });
-      showAlert(response.data.message, 'success');
-      handleModalClose();
-    } catch (error) {
-      showAlert(`Error: ${error.response.data.error}`, 'error');
     }
   };
 
@@ -200,57 +124,18 @@ function GitPage({ onBackToMenu }) {
   };
 
   const handleOpenRenameDialog = () => {
-    setIsRenaming(true); 
+    setIsRenaming(true);
     setRenameValue(repoTabs[rightClickedTab].name);
   };
 
   const handleCloseRenameDialog = () => {
-    setIsRenaming(false); 
+    setIsRenaming(false);
   };
 
-  const handleStash = async () => {
-    try {
-      const { localPath } = repoTabs[currentTab];
-      const response = await axios.post('http://localhost:5000/stash', { stashMessage, localPath });
-      showAlert(response.data.message, 'success');
-      handleModalClose();
-    }
-    catch (error) {
-      showAlert(`Error: ${error.response.data.error}`, 'error');
-    }
-  };
-
-  const handleCheckoutBranch = async () => {
-    try {
-      const { localPath } = repoTabs[currentTab];
-      const response = await axios.post('http://localhost:5000/checkout', { branchName: checkoutBranch, localPath });
-      showAlert(response.data.message, 'success');
-      handleModalClose();
-      fetchBranches(); 
-    } catch (error) {
-      showAlert(`Error: ${error.response.data.error}`, 'error');
-    }
-  };
-
-  const fetchBranches = useCallback(async () => {
-    try {
-      const { localPath } = repoTabs[currentTab];
-      const response = await axios.post('http://localhost:5000/list-branches', { localPath });
-      setBranches(response.data.branches);
-      setCurrentBranch(response.data.currentBranch);
-    } catch (error) {
-      showAlert(`Error: ${error.response.data.error}`, 'error');
-    }
-  }, [currentTab, repoTabs]);
-  
-  useEffect(() => {
-    fetchBranches();
-  }, [currentTab, fetchBranches]);
-  
   const indexOfLastFile = currentPage * filesPerPage;
   const indexOfFirstFile = indexOfLastFile - filesPerPage;
 
-  const filteredFiles = files.filter(file => 
+  const filteredFiles = files.filter(file =>
     file.path.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -270,6 +155,10 @@ function GitPage({ onBackToMenu }) {
     setAlertOpen(false);
   };
 
+  useEffect(() => {
+    fetchBranches(repoTabs, currentTab, setBranches, setCurrentBranch, showAlert);
+  }, [currentTab]);
+
   return (
     <Box className="git-page-container" sx={{ color: 'white' }}>
       <Button variant="contained" color="secondary" onClick={onBackToMenu} className="menu-button">
@@ -278,52 +167,12 @@ function GitPage({ onBackToMenu }) {
       <Typography variant="h4" component="h1" gutterBottom>
         Git Operations
       </Typography>
-      <Grid container spacing={2} justifyContent="center">
-        <Grid item xs={12} sm={4} md={3}>
-          <Button variant="contained" color="primary" fullWidth onClick={() => handleModalOpen('push')}>Push</Button>
-        </Grid>
-        <Grid item xs={12} sm={4} md={3}>
-          <Button variant="contained" color="primary" fullWidth onClick={() => handleModalOpen('pull')}>Pull</Button>
-        </Grid>
-        <Grid item xs={12} sm={4} md={3}>
-          <Button variant="contained" color="primary" fullWidth onClick={() => handleModalOpen('commit')}>Commit</Button>
-        </Grid>
-        <Grid item xs={12} sm={4} md={3}>
-        <Button variant="contained" color="primary" fullWidth onClick={() => handleModalOpen('stash')}>Stash</Button>
-        </Grid>
-        <Grid item xs={12} sm={4} md={3}>
-        <Button variant="contained" color="primary" fullWidth onClick={() => handleModalOpen('checkout')}>Checkout</Button>
-        </Grid>
-        <Grid item xs={12} sm={4} md={3}>
-          <Button variant="contained" color="primary" fullWidth>Delete Previous Commit</Button>
-        </Grid>
-        <Grid item xs={12} sm={4} md={3}>
-          <Button variant="contained" color="primary" fullWidth>Edit Previous Commit</Button>
-        </Grid>
-        <Grid item xs={12} sm={4} md={3}>
-          <Button variant="contained" color="primary" fullWidth>Merge</Button>
-        </Grid>
-        <Grid item xs={12} sm={4} md={3}>
-          <Button variant="contained" color="primary" fullWidth>Rebase</Button>
-        </Grid>
-      </Grid>
-
+      <GitActions handleModalOpen={handleModalOpen} />
       <Box mt={6} className="connect-repo-section">
         <Typography variant="h5" component="h2" gutterBottom>
           Manage Git Repositories
         </Typography>
-        <AppBar position="static" style={{ backgroundColor: '#333' }}>
-          <Tabs value={currentTab} onChange={handleTabChange} aria-label="repo tabs">
-            {repoTabs.map((tab, index) => (
-              <Tab 
-                key={index} 
-                label={tab.name}
-                onContextMenu={(event) => handleRightClick(event, index)} 
-              />
-            ))}
-            <Button onClick={handleAddRepoTab} style={{ color: 'white' }}>+</Button>
-          </Tabs>
-        </AppBar>
+        <RepoTabs repoTabs={repoTabs} currentTab={currentTab} handleTabChange={handleTabChange} handleRightClick={handleRightClick} handleAddRepoTab={handleAddRepoTab} />
         <Box className="config-section">
           <Box className="connection-type-section">
             <Button
@@ -345,10 +194,10 @@ function GitPage({ onBackToMenu }) {
                 {currentConfig === 'remote' ? (
                   <Grid container spacing={2}>
                     <Grid item xs={12} md={6}>
-                      <TextField 
-                        label="Repository URL" 
-                        variant="outlined" 
-                        fullWidth 
+                      <TextField
+                        label="Repository URL"
+                        variant="outlined"
+                        fullWidth
                         margin="normal"
                         value={tab.repoUrl}
                         onChange={(e) => handleRepoInputChange(index, 'repoUrl', e.target.value)}
@@ -357,10 +206,10 @@ function GitPage({ onBackToMenu }) {
                       />
                     </Grid>
                     <Grid item xs={12} md={6}>
-                      <TextField 
-                        label="GitHub Username" 
-                        variant="outlined" 
-                        fullWidth 
+                      <TextField
+                        label="GitHub Username"
+                        variant="outlined"
+                        fullWidth
                         margin="normal"
                         value={tab.githubUsername}
                         onChange={(e) => handleRepoInputChange(index, 'githubUsername', e.target.value)}
@@ -369,10 +218,10 @@ function GitPage({ onBackToMenu }) {
                       />
                     </Grid>
                     <Grid item xs={12} md={6}>
-                      <TextField 
-                        label="GitHub Token" 
-                        variant="outlined" 
-                        fullWidth 
+                      <TextField
+                        label="GitHub Token"
+                        variant="outlined"
+                        fullWidth
                         margin="normal"
                         value={tab.githubToken}
                         onChange={(e) => handleRepoInputChange(index, 'githubToken', e.target.value)}
@@ -381,10 +230,10 @@ function GitPage({ onBackToMenu }) {
                       />
                     </Grid>
                     <Grid item xs={12} md={6}>
-                      <TextField 
-                        label="Branch Name" 
-                        variant="outlined" 
-                        fullWidth 
+                      <TextField
+                        label="Branch Name"
+                        variant="outlined"
+                        fullWidth
                         margin="normal"
                         value={tab.branchName}
                         onChange={(e) => handleRepoInputChange(index, 'branchName', e.target.value)}
@@ -393,10 +242,10 @@ function GitPage({ onBackToMenu }) {
                       />
                     </Grid>
                     <Grid item xs={12}>
-                      <Button 
-                        variant="contained" 
-                        color="primary" 
-                        onClick={handleCloneRepo}
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => handleCloneRepo(repoTabs, currentTab, showAlert)}
                         style={{ marginTop: '20px' }}
                       >
                         Clone Repository
@@ -406,10 +255,10 @@ function GitPage({ onBackToMenu }) {
                 ) : (
                   <Grid container spacing={2}>
                     <Grid item xs={12}>
-                      <TextField 
-                        label="Local Path" 
-                        variant="outlined" 
-                        fullWidth 
+                      <TextField
+                        label="Local Path"
+                        variant="outlined"
+                        fullWidth
                         margin="normal"
                         value={tab.localPath}
                         onChange={(e) => handleRepoInputChange(index, 'localPath', e.target.value)}
@@ -429,334 +278,86 @@ function GitPage({ onBackToMenu }) {
         <Typography variant="h5" component="h2" gutterBottom>
           Run Commit by Hash
         </Typography>
-        <TextField 
-          label="Commit Hash" 
-          variant="outlined" 
-          fullWidth 
+        <TextField
+          label="Commit Hash"
+          variant="outlined"
+          fullWidth
           margin="normal"
           value={commitHash}
           onChange={(e) => setCommitHash(e.target.value)}
           InputLabelProps={{ style: { color: 'white' } }}
           InputProps={{ style: { color: 'white' } }}
         />
-        <Button 
-          variant="contained" 
-          color="primary" 
-          onClick={handleRunCommit}
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => handleRunCommit(commitHash, repoTabs, currentTab, showAlert)}
           style={{ marginTop: '20px' }}
         >
           Run Commit
         </Button>
       </Box>
 
-      <Dialog open={modalOpen} onClose={handleModalClose} maxWidth="md" fullWidth>
-        <DialogTitle style={{ color: 'white', backgroundColor: '#333' }}>
-          {modalType === 'commit' && `Commit Changes - ${repoTabs[currentTab].name}`}
-          {modalType === 'push' && `Push Changes - ${repoTabs[currentTab].name}`}
-          {modalType === 'pull' && `Pull Changes - ${repoTabs[currentTab].name}`}
-          {modalType === 'stash' && `Stash Changes - ${repoTabs[currentTab].name}`}
-          {modalType === 'checkout' && `Checkout Branch - ${repoTabs[currentTab].name}`}
-        </DialogTitle>
-        <DialogContent style={{ backgroundColor: '#333' }}>
-          {modalType === 'checkout' && (
-            <>
-              <TextField
-                select
-                label="Branch"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                value={checkoutBranch}
-                onChange={(e) => setCheckoutBranch(e.target.value)}
-                InputLabelProps={{ style: { color: 'white' } }}
-                InputProps={{ style: { color: 'white' } }}
-              >
-                {branches.map((branch, index) => (
-                  <MenuItem key={index} value={branch}>
-                    {branch}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </>
-          )}
-          {modalType === 'stash' && (
-            <>
-              <TextField
-                label="Stash Message"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                value={stashMessage}
-                onChange={(e) => setStashMessage(e.target.value)}
-                InputLabelProps={{ style: { color: 'white' } }}
-                InputProps={{ style: { color: 'white' } }}
-              />
-            </>
-          )}
-          {modalType === 'commit' && (
-            <>
-              <Typography variant="body1" style={{ color: 'white', marginBottom: '10px' }}>
-                Committing to branch: {selectedCommitBranch || currentBranch}
-              </Typography>
-              <TextField
-                select
-                label="Branch"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                value={selectedCommitBranch || currentBranch}
-                onChange={(e) => setSelectedCommitBranch(e.target.value)}
-                InputLabelProps={{ style: { color: 'white' } }}
-                InputProps={{ style: { color: 'white' } }}
-              >
-                {branches.map((branch, index) => (
-                  <MenuItem key={index} value={branch}>
-                    {branch}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <TextField
-                label="Commit Message"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                value={commitMessage}
-                onChange={(e) => setCommitMessage(e.target.value)}
-                InputLabelProps={{ style: { color: 'white' } }}
-                InputProps={{ style: { color: 'white' } }}
-              />
-              <TextField
-                label="Search Files"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                InputLabelProps={{ style: { color: 'white' } }}
-                InputProps={{ style: { color: 'white' } }}
-              />
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={selectedFiles.length === files.length}
-                    onChange={handleSelectAllFiles}
-                    name="selectAllFiles"
-                    style={{ color: 'white' }}
-                  />
-                }
-                label="Select All Changes"
-                style={{ color: 'white' }}
-              />
-              <Typography variant="h6" component="h3" gutterBottom style={{ color: 'white' }}>
-                Select Files to Commit
-              </Typography>
-              {files.length === 0 ? (
-                <Typography variant="body1" style={{ color: 'white' }}>
-                  No changes to commit.
-                </Typography>
-              ) : (
-                <FormGroup>
-                  {currentFiles.map((file, index) => (
-                    <FormControlLabel
-                      key={index}
-                      control={
-                        <Checkbox
-                          checked={selectedFiles.includes(file.path)}
-                          onChange={() => handleFileSelection(file.path)}
-                          name={file.path}
-                          style={{ color: 'white' }}
-                        />
-                      }
-                      label={file.path}
-                      style={{ color: 'white' }}/>
-                  ))}
-                </FormGroup>
-              )}
-              {totalPages > 1 && (
-                <div className="pagination">
-                  {Array.from({ length: totalPages }, (_, index) => (
-                    <Button key={index + 1} onClick={() => paginate(index + 1)} style={{ color: 'white' }}>
-                      {index + 1}
-                    </Button>
-                  ))}
-                </div>
-              )}
-              <FormGroup>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={autoStage}
-                      onChange={(e) => setAutoStage(e.target.checked)}
-                      name="autoStage"
-                      style={{ color: 'white' }}
-                    />
-                  }
-                  label="Auto Stage Files"
-                  style={{ color: 'white' }}
-                />
-              </FormGroup>
-              {stageFilesError && (
-                <>
-                  <Typography variant="body1" color="error" gutterBottom>
-                    One or more files are not staged. Would you like to stage the files?
-                  </Typography>
-                  <ul>
-                    {unstagedFiles.map((file, index) => (
-                      <li key={index} style={{ color: 'white' }}>{file}</li>
-                    ))}
-                  </ul>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleStageFiles}
-                    style={{ marginTop: '10px' }}
-                  >
-                    Stage Files
-                  </Button>
-                </>
-              )}
-            </>
-          )}
-          {modalType === 'push' && (
-            <>
-              <TextField
-                label="GitHub Username"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                value={repoTabs[currentTab].githubUsername}
-                onChange={(e) => handleRepoInputChange(currentTab, 'githubUsername', e.target.value)}
-                InputLabelProps={{ style: { color: 'white' } }}
-                InputProps={{ style: { color: 'white' } }}
-              />
-              <TextField
-                label="GitHub Token"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                value={repoTabs[currentTab].githubToken}
-                onChange={(e) => handleRepoInputChange(currentTab, 'githubToken', e.target.value)}
-                InputLabelProps={{ style: { color: 'white' } }}
-                InputProps={{ style: { color: 'white' } }}
-              />
-              <TextField
-                label="Branch Name"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                value={repoTabs[currentTab].branchName}
-                onChange={(e) => handleRepoInputChange(currentTab, 'branchName', e.target.value)}
-                InputLabelProps={{ style: { color: 'white' } }}
-                InputProps={{ style: { color: 'white' } }}
-              />
-              <TextField
-                label="Local Path"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                value={repoTabs[currentTab].localPath}
-                onChange={(e) => handleRepoInputChange(currentTab, 'localPath', e.target.value)}
-                InputLabelProps={{ style: { color: 'white' } }}
-                InputProps={{ style: { color: 'white' } }}
-              />
-              <TextField
-                label="Repository URL"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                value={repoTabs[currentTab].repoUrl}
-                onChange={(e) => handleRepoInputChange(currentTab, 'repoUrl', e.target.value)}
-                InputLabelProps={{ style: { color: 'white' } }}
-                InputProps={{ style: { color: 'white' } }}
-              />
-            </>
-          )}
-          {modalType === 'pull' && (
-            <>
-              <TextField
-                label="GitHub Username"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                value={repoTabs[currentTab].githubUsername}
-                onChange={(e) => handleRepoInputChange(currentTab, 'githubUsername', e.target.value)}
-                InputLabelProps={{ style: { color: 'white' } }}
-                InputProps={{ style: { color: 'white' } }}
-              />
-              <TextField
-                label="GitHub Token"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                value={repoTabs[currentTab].githubToken}
-                onChange={(e) => handleRepoInputChange(currentTab, 'githubToken', e.target.value)}
-                InputLabelProps={{ style: { color: 'white' } }}
-                InputProps={{ style: { color: 'white' } }}
-              />
-              <TextField
-                label="Branch Name"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                value={repoTabs[currentTab].branchName}
-                onChange={(e) => handleRepoInputChange(currentTab, 'branchName', e.target.value)}
-                InputLabelProps={{ style: { color: 'white' } }}
-                InputProps={{ style: { color: 'white' } }}
-              />
-              <TextField
-                label="Local Path"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                value={repoTabs[currentTab].localPath}
-                onChange={(e) => handleRepoInputChange(currentTab, 'localPath', e.target.value)}
-                InputLabelProps={{ style: { color: 'white' } }}
-                InputProps={{ style: { color: 'white' } }}
-              />
-              <TextField
-                label="Repository URL"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                value={repoTabs[currentTab].repoUrl}
-                onChange={(e) => handleRepoInputChange(currentTab, 'repoUrl', e.target.value)}
-                InputLabelProps={{ style: { color: 'white' } }}
-                InputProps={{ style: { color: 'white' } }}
-              />
-            </>
-          )}
-        </DialogContent>
-        <DialogActions style={{ backgroundColor: '#333' }}>
-          <Button onClick={handleModalClose} color="secondary">
-            Cancel
-          </Button>
-          {modalType === 'commit' && !stageFilesError && (
-            <Button onClick={handleCommit} color="primary">
-              Commit
-            </Button>
-          )}
-          {modalType === 'push' && (
-            <Button onClick={handlePush} color="primary">
-              Push
-            </Button>
-          )}
-          {modalType === 'pull' && (
-            <Button onClick={handlePull} color="primary">
-              Pull
-            </Button>
-          )}
-          {modalType === 'stash' && (
-            <Button onClick={handleStash} color="primary">
-              Stash
-            </Button>
-          )}
-          {modalType === 'checkout' && (
-            <Button onClick={handleCheckoutBranch} color="primary">
-              Checkout
-            </Button>
-          )}
-        </DialogActions>
-      </Dialog>
+      <CommitDialog
+        open={modalOpen && modalType === 'commit'}
+        onClose={handleModalClose}
+        onCommit={() => handleCommit(repoTabs, currentTab, selectedFiles, commitMessage, autoStage, selectedCommitBranch, currentBranch, showAlert, handleModalClose, setStageFilesError, setUnstagedFiles)}
+        files={files}
+        branches={branches}
+        currentBranch={currentBranch}
+        selectedFiles={selectedFiles}
+        handleFileSelection={handleFileSelection}
+        autoStage={autoStage}
+        setAutoStage={setAutoStage}
+        handleSelectAllFiles={handleSelectAllFiles}
+        handleStageFiles={() => handleStageFiles(repoTabs, currentTab, selectedFiles, showAlert, setStageFilesError, setUnstagedFiles)}
+        stageFilesError={stageFilesError}
+        unstagedFiles={unstagedFiles}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        commitMessage={commitMessage}
+        setCommitMessage={setCommitMessage}
+        selectedCommitBranch={selectedCommitBranch}
+        setSelectedCommitBranch={setSelectedCommitBranch}
+        paginate={paginate}
+        totalPages={totalPages}
+        currentFiles={currentFiles}
+      />
+
+      <PushDialog
+        open={modalOpen && modalType === 'push'}
+        onClose={handleModalClose}
+        repoTabs={repoTabs}
+        currentTab={currentTab}
+        handleRepoInputChange={handleRepoInputChange}
+        handlePush={() => handlePush(repoTabs, currentTab, showAlert, handleModalClose)}
+      />
+
+      <PullDialog
+        open={modalOpen && modalType === 'pull'}
+        onClose={handleModalClose}
+        repoTabs={repoTabs}
+        currentTab={currentTab}
+        handleRepoInputChange={handleRepoInputChange}
+        handlePull={() => handlePull(repoTabs, currentTab, showAlert, handleModalClose)}
+      />
+
+      <StashDialog
+        open={modalOpen && modalType === 'stash'}
+        onClose={handleModalClose}
+        stashMessage={stashMessage}
+        setStashMessage={setStashMessage}
+        handleStash={() => handleStash(repoTabs, currentTab, stashMessage, showAlert, handleModalClose)}
+      />
+
+      <CheckoutDialog
+        open={modalOpen && modalType === 'checkout'}
+        onClose={handleModalClose}
+        branches={branches}
+        checkoutBranch={checkoutBranch}
+        setCheckoutBranch={setCheckoutBranch}
+        handleCheckoutBranch={() => handleCheckoutBranch(repoTabs, currentTab, checkoutBranch, showAlert, handleModalClose, () => fetchBranches(repoTabs, currentTab, setBranches, setCurrentBranch, showAlert))}
+      />
 
       <Menu
         anchorEl={anchorEl}
@@ -767,35 +368,14 @@ function GitPage({ onBackToMenu }) {
         <MenuItem onClick={handleDeleteTab}>Delete</MenuItem>
       </Menu>
 
-      <Dialog open={isRenaming} onClose={handleCloseRenameDialog}>
-        <DialogTitle>Rename Repository</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="New Name"
-            type="text"
-            fullWidth
-            value={renameValue}
-            onChange={(e) => setRenameValue(e.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                handleRenameTab(); 
-                handleCloseRenameDialog()
-              }
-            }}
-          />
-        </DialogContent>
-        <DialogActions>
-        <Button onClick={handleCloseRenameDialog} color="secondary">
-            Cancel
-        </Button>
-        <Button onClick={handleRenameTab} color="primary">
-            Save
-        </Button>
-        </DialogActions>
-      </Dialog>
-      
+      <RenameDialog
+        open={isRenaming}
+        onClose={handleCloseRenameDialog}
+        renameValue={renameValue}
+        setRenameValue={setRenameValue}
+        onRename={handleRenameTab}
+      />
+
       <Alert
         open={alertOpen}
         onClose={handleAlertClose}
